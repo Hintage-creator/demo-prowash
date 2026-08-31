@@ -1,0 +1,971 @@
+<title>Prowash Autoaufbereitung</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800;900&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ---------------------------------------------------------
+     Prowash Autoaufbereitung — Modell-Website
+     Dark, "showroom" single-theme design (deliberate choice —
+     see design rationale in accompanying chat message).
+  --------------------------------------------------------- */
+
+  :root{
+    --bg: #0b0c0e;
+    --bg-soft: #101215;
+    --surface: #16181c;
+    --surface-2: #1c1f24;
+    --border: #2a2d33;
+    --border-strong: #3c4048;
+    --text: #f2efe8;
+    --text-muted: #a3a6ad;
+    --text-faint: #6b6e75;
+    --accent: #c8863f;
+    --accent-strong: #e6a45c;
+    --accent-ink: #1a1208;
+    --accent-soft: rgba(200,134,63,.13);
+    --ice: #6fb3c2;
+    --ice-soft: rgba(111,179,194,.14);
+    --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    --font-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --maxw: 1180px;
+  }
+
+  *,*::before,*::after{ box-sizing:border-box; }
+  html{ background:var(--bg); color-scheme: dark; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  img,svg{ display:block; max-width:100%; }
+  a{ color:inherit; }
+  h1,h2,h3,h4{
+    font-family:var(--font-display);
+    font-weight:800;
+    line-height:0.96;
+    margin:0;
+    text-wrap:balance;
+    letter-spacing:.2px;
+  }
+  p{ margin:0; }
+  ::selection{ background:var(--accent); color:var(--accent-ink); }
+
+  :focus-visible{
+    outline:2px solid var(--accent-strong);
+    outline-offset:3px;
+    border-radius:2px;
+  }
+
+  .wrap{
+    max-width:var(--maxw);
+    margin:0 auto;
+    padding:0 clamp(20px,4vw,48px);
+  }
+
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--accent-strong);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:22px; height:1px;
+    background:var(--accent-strong);
+    display:inline-block;
+  }
+  .eyebrow.muted{ color:var(--text-faint); }
+  .eyebrow.muted::before{ background:var(--text-faint); }
+
+  /* ---------- reveal-on-scroll ---------- */
+  .reveal{ opacity:0; transform:translateY(18px); transition:opacity .7s ease, transform .7s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+  @media (prefers-reduced-motion: reduce){
+    .reveal{ opacity:1; transform:none; transition:none; }
+    *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; }
+  }
+
+  /* ================= RIBBON ================= */
+  .ribbon{
+    background:var(--accent);
+    color:var(--accent-ink);
+    font-family:var(--font-mono);
+    font-size:12.5px;
+    text-align:center;
+    padding:9px 18px;
+    letter-spacing:.02em;
+  }
+  .ribbon b{ font-weight:700; }
+  .ribbon a{ text-decoration:underline; text-underline-offset:2px; white-space:nowrap; }
+
+  /* ================= NAV ================= */
+  header.site{
+    position:sticky; top:0; z-index:50;
+    background:rgba(11,12,14,.86);
+    backdrop-filter:blur(10px) saturate(140%);
+    border-bottom:1px solid var(--border);
+  }
+  nav.wrap{
+    display:flex; align-items:center; justify-content:space-between;
+    padding-top:14px; padding-bottom:14px;
+    gap:24px;
+  }
+  .brand{ display:flex; align-items:baseline; gap:9px; }
+  .brand .mark{
+    font-family:var(--font-display); font-weight:900; font-size:24px;
+    letter-spacing:.01em;
+  }
+  .brand .sub{
+    font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+    color:var(--text-faint); text-transform:uppercase;
+  }
+  .navlinks{ display:flex; gap:28px; list-style:none; margin:0; padding:0; }
+  .navlinks a{
+    font-size:14.5px; text-decoration:none; color:var(--text-muted);
+    transition:color .15s ease;
+  }
+  .navlinks a:hover{ color:var(--text); }
+  .navcta{ display:flex; align-items:center; gap:14px; }
+
+  .btn{
+    font-family:var(--font-body); font-weight:700; font-size:14.5px;
+    padding:11px 20px; border-radius:2px; text-decoration:none;
+    display:inline-flex; align-items:center; gap:8px;
+    border:1px solid transparent; cursor:pointer;
+    transition:transform .15s ease, border-color .15s ease, background .15s ease, color .15s ease;
+    white-space:nowrap;
+  }
+  .btn-primary{ background:var(--accent); color:var(--accent-ink); }
+  .btn-primary:hover{ background:var(--accent-strong); transform:translateY(-1px); }
+  .btn-ghost{ background:transparent; color:var(--text); border-color:var(--border-strong); }
+  .btn-ghost:hover{ border-color:var(--accent); color:var(--accent-strong); }
+  .btn-sm{ padding:8px 14px; font-size:13px; }
+
+  @media (max-width:860px){ .navlinks{ display:none; } }
+
+  /* ================= HERO ================= */
+  .hero{ position:relative; padding:clamp(52px,9vw,108px) 0 clamp(40px,6vw,80px); overflow:hidden; }
+  .hero::before{
+    content:""; position:absolute; inset:-20% -10% auto -10%; height:70%;
+    background:radial-gradient(60% 60% at 30% 20%, var(--accent-soft), transparent 70%);
+    pointer-events:none;
+  }
+  .hero-grid{
+    display:grid; grid-template-columns:1.05fr .95fr; gap:clamp(32px,5vw,64px);
+    align-items:center; position:relative;
+  }
+  @media (max-width:920px){ .hero-grid{ grid-template-columns:1fr; } }
+
+  .hero h1{
+    font-size:clamp(42px,6.4vw,76px);
+    margin-top:16px;
+    color:var(--text);
+  }
+  .hero h1 em{ font-style:normal; color:var(--accent-strong); }
+  .hero p.lead{
+    font-size:clamp(16px,1.7vw,18.5px);
+    color:var(--text-muted);
+    max-width:52ch;
+    margin-top:20px;
+  }
+  .hero-cta{ display:flex; gap:14px; margin-top:32px; flex-wrap:wrap; }
+
+  .trustrow{
+    display:flex; flex-wrap:wrap; gap:22px;
+    margin-top:40px; padding-top:24px; border-top:1px solid var(--border);
+  }
+  .trust-item{ display:flex; flex-direction:column; gap:3px; }
+  .trust-item .num{ font-family:var(--font-mono); font-size:15px; color:var(--text); font-variant-numeric:tabular-nums; }
+  .trust-item .lbl{ font-size:12px; color:var(--text-faint); letter-spacing:.04em; }
+
+  /* --- hero visual: gloss panel --- */
+  .gloss{
+    position:relative; aspect-ratio:4/5; border-radius:6px;
+    background:
+      radial-gradient(120% 90% at 15% 0%, #2a2115 0%, transparent 55%),
+      linear-gradient(155deg,#1d2024 0%, #101214 46%, #0a0b0c 100%);
+    border:1px solid var(--border-strong);
+    overflow:hidden;
+    box-shadow: 0 30px 70px -30px rgba(0,0,0,.7);
+  }
+  .gloss .sheen{
+    position:absolute; inset:-40% -60%;
+    background:linear-gradient(75deg, transparent 40%, rgba(230,164,92,.35) 48%, rgba(255,235,210,.55) 50%, rgba(230,164,92,.35) 52%, transparent 60%);
+    animation: sweep 6s ease-in-out infinite;
+  }
+  @keyframes sweep{
+    0%,100%{ transform:translateX(-18%) rotate(0.001deg); }
+    50%{ transform:translateX(18%) rotate(0.001deg); }
+  }
+  .gloss .beads{
+    position:absolute; inset:0;
+    background-image:
+      radial-gradient(circle, rgba(255,255,255,.14) 0 1px, transparent 1.6px),
+      radial-gradient(circle, rgba(255,255,255,.10) 0 1px, transparent 1.6px);
+    background-size: 46px 46px, 71px 71px;
+    background-position: 0 0, 20px 30px;
+    mix-blend-mode:screen;
+    opacity:.5;
+  }
+  .gloss .plate{
+    position:absolute; left:18px; right:18px; bottom:18px;
+    display:flex; justify-content:space-between; align-items:flex-end;
+    font-family:var(--font-mono); font-size:11px; color:var(--text-faint);
+    letter-spacing:.08em; text-transform:uppercase;
+  }
+  .gloss .plate strong{ color:var(--accent-strong); display:block; font-size:12.5px; }
+  .gloss .frame{
+    position:absolute; inset:14px; border:1px solid rgba(242,239,232,.08); border-radius:3px; pointer-events:none;
+  }
+
+  /* ================= SECTION shell ================= */
+  section{ padding:clamp(56px,8vw,96px) 0; }
+  section + section{ border-top:1px solid var(--border); }
+  .head{ display:flex; justify-content:space-between; align-items:flex-end; gap:24px; flex-wrap:wrap; margin-bottom:clamp(32px,5vw,52px); }
+  .head h2{ font-size:clamp(30px,4vw,44px); margin-top:12px; max-width:16ch; }
+  .head p.desc{ color:var(--text-muted); max-width:42ch; font-size:15.5px; }
+
+  .tag{
+    font-family:var(--font-mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+    padding:4px 9px; border:1px solid var(--border-strong); border-radius:20px; color:var(--text-faint);
+  }
+  .tag.fictive{ border-color:rgba(111,179,194,.4); color:var(--ice); background:var(--ice-soft); }
+
+  /* ================= USP strip ================= */
+  .usp-strip{ padding:34px 0; background:var(--bg-soft); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+  .usp-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+  @media (max-width:860px){ .usp-grid{ grid-template-columns:repeat(2,1fr); } }
+  .usp{ display:flex; gap:12px; align-items:flex-start; }
+  .usp .ico{ width:20px; height:20px; flex:none; color:var(--accent-strong); margin-top:2px; }
+  .usp .t{ font-weight:700; font-size:14.5px; }
+  .usp .d{ font-size:13px; color:var(--text-faint); margin-top:2px; }
+
+  /* ================= LEISTUNGEN ================= */
+  .services{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); border:1px solid var(--border); }
+  @media (max-width:860px){ .services{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:560px){ .services{ grid-template-columns:1fr; } }
+  .svc{ background:var(--surface); padding:28px 26px; display:flex; flex-direction:column; gap:14px; transition:background .2s ease; }
+  .svc:hover{ background:var(--surface-2); }
+  .svc .ico{ width:30px; height:30px; color:var(--accent-strong); }
+  .svc h3{ font-family:var(--font-body); font-weight:700; font-size:16.5px; }
+  .svc p{ font-size:14px; color:var(--text-muted); }
+
+  /* ================= ABLAUF ================= */
+  .steps{ display:grid; grid-template-columns:repeat(4,1fr); gap:22px; }
+  @media (max-width:860px){ .steps{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:520px){ .steps{ grid-template-columns:1fr; } }
+  .step{ position:relative; padding-top:14px; border-top:2px solid var(--border-strong); }
+  .step .idx{ font-family:var(--font-mono); font-size:13px; color:var(--accent-strong); }
+  .step h4{ font-family:var(--font-body); font-weight:700; font-size:16px; margin-top:8px; }
+  .step p{ font-size:13.6px; color:var(--text-muted); margin-top:6px; }
+
+  /* ================= VORHER/NACHHER ================= */
+  .compare{
+    position:relative; border-radius:6px; overflow:hidden; border:1px solid var(--border-strong);
+    aspect-ratio:16/7; max-width:100%;
+  }
+  .cmp-layer{ position:absolute; inset:0; }
+  .cmp-before{
+    background:
+      repeating-radial-gradient(circle at 20% 30%, rgba(255,255,255,.05) 0 1px, transparent 2px 26px),
+      linear-gradient(160deg,#3a352c,#221f1a 60%,#17140f);
+  }
+  .cmp-after{
+    background:linear-gradient(155deg,#1d2024,#0d0e10 55%,#0a0b0c);
+  }
+  .cmp-after::after{
+    content:""; position:absolute; inset:-30% -20%;
+    background:linear-gradient(80deg, transparent 42%, rgba(230,164,92,.5) 49%, rgba(255,240,220,.7) 50%, rgba(230,164,92,.5) 51%, transparent 58%);
+    animation: sweep 5s ease-in-out infinite;
+  }
+  .cmp-after{ clip-path: inset(0 0 0 50%); }
+  .cmp-label{
+    position:absolute; top:14px; font-family:var(--font-mono); font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; padding:5px 10px; background:rgba(11,12,14,.65); border:1px solid var(--border-strong); border-radius:3px;
+  }
+  .cmp-label.l{ left:14px; } .cmp-label.r{ right:14px; }
+  .cmp-handle{
+    position:absolute; top:0; bottom:0; left:50%; width:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .cmp-handle::before{ content:""; position:absolute; top:0; bottom:0; width:2px; background:var(--accent-strong); left:0; }
+  .cmp-grip{
+    width:34px; height:34px; border-radius:50%; background:var(--accent); border:3px solid var(--bg);
+    display:flex; align-items:center; justify-content:center; color:var(--accent-ink); font-size:13px;
+  }
+  input.cmp-range{
+    position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:ew-resize; -webkit-appearance:none;
+  }
+  .cmp-note{ margin-top:14px; font-size:12.5px; color:var(--text-faint); font-family:var(--font-mono); }
+
+  /* ================= TEAM ================= */
+  .team-note{
+    background:var(--surface); border:1px dashed var(--border-strong); border-radius:6px;
+    padding:16px 20px; font-size:13.6px; color:var(--text-muted); margin-bottom:36px; max-width:76ch;
+  }
+  .team-note b{ color:var(--ice); }
+  .team-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+  @media (max-width:860px){ .team-grid{ grid-template-columns:1fr; } }
+  .member{ background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:26px; position:relative; }
+  .member .badge{
+    position:absolute; top:14px; right:14px; font-family:var(--font-mono); font-size:9.5px; letter-spacing:.1em;
+    padding:3px 8px; border-radius:20px; background:var(--ice-soft); color:var(--ice); border:1px solid rgba(111,179,194,.35);
+  }
+  .avatar{
+    width:76px; height:76px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-weight:800; font-size:26px; color:var(--accent-ink);
+    margin-bottom:18px; position:relative;
+  }
+  .avatar::after{ content:""; position:absolute; inset:-4px; border-radius:50%; border:1px solid var(--border-strong); }
+  .a1{ background:linear-gradient(150deg,var(--accent-strong),#8a5a26); }
+  .a2{ background:linear-gradient(150deg,#e7d3ad,var(--accent)); }
+  .a3{ background:linear-gradient(150deg,var(--ice),#2f5b64); }
+  .member h3{ font-family:var(--font-body); font-size:17px; font-weight:700; }
+  .member .role{ font-size:13px; color:var(--accent-strong); margin-top:2px; }
+  .member p.bio{ font-size:13.6px; color:var(--text-muted); margin-top:12px; }
+
+  /* ================= STIMMEN ================= */
+  .quotes{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+  @media (max-width:860px){ .quotes{ grid-template-columns:1fr; } }
+  .quote{ background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:26px; display:flex; flex-direction:column; gap:16px; }
+  .quote .stars{ color:var(--accent-strong); letter-spacing:2px; font-size:14px; }
+  .quote p{ font-size:15px; color:var(--text); }
+  .quote .who{ font-family:var(--font-mono); font-size:12px; color:var(--text-faint); }
+
+  /* ================= PREISE ================= */
+  .price-note{ font-size:12.8px; color:var(--text-faint); font-family:var(--font-mono); margin-top:-18px; margin-bottom:36px; }
+  .prices{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+  @media (max-width:860px){ .prices{ grid-template-columns:1fr; } }
+  .price{ background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:30px; display:flex; flex-direction:column; }
+  .price.hi{ border-color:var(--accent); background:linear-gradient(180deg,var(--surface-2),var(--surface)); position:relative; }
+  .price.hi .pill{
+    position:absolute; top:-12px; left:26px; background:var(--accent); color:var(--accent-ink);
+    font-family:var(--font-mono); font-size:10.5px; letter-spacing:.08em; padding:4px 10px; border-radius:20px; text-transform:uppercase;
+  }
+  .price h3{ font-family:var(--font-body); font-weight:800; font-size:19px; }
+  .price .amount{ font-family:var(--font-mono); font-size:34px; color:var(--accent-strong); margin-top:12px; font-variant-numeric:tabular-nums; }
+  .price .amount span{ font-size:14px; color:var(--text-faint); }
+  .price ul{ list-style:none; margin:20px 0 0; padding:0; display:flex; flex-direction:column; gap:10px; flex:1; }
+  .price li{ font-size:13.8px; color:var(--text-muted); display:flex; gap:9px; }
+  .price li::before{ content:"—"; color:var(--accent-strong); }
+
+  /* ================= KONTAKT ================= */
+  .contact-grid{ display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:start; }
+  @media (max-width:860px){ .contact-grid{ grid-template-columns:1fr; } }
+  .info-list{ display:flex; flex-direction:column; gap:22px; margin-top:28px; }
+  .info-row{ display:flex; gap:16px; align-items:flex-start; }
+  .info-row .ico{ width:20px; height:20px; color:var(--accent-strong); flex:none; margin-top:3px; }
+  .info-row .k{ font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); font-family:var(--font-mono); }
+  .info-row .v{ font-size:15.5px; margin-top:3px; }
+  .info-row a.v{ text-decoration:none; }
+  .info-row a.v:hover{ color:var(--accent-strong); }
+
+  .pinpanel{
+    aspect-ratio:1/1; border-radius:6px; background:
+      linear-gradient(160deg,#1a1d21,#0c0d0f);
+    border:1px solid var(--border-strong); position:relative; overflow:hidden;
+  }
+  .pinpanel svg{ position:absolute; inset:0; width:100%; height:100%; }
+  .pinpanel .grid-lines{ position:absolute; inset:0; background-image:linear-gradient(var(--border) 1px, transparent 1px),linear-gradient(90deg,var(--border) 1px, transparent 1px); background-size:34px 34px; opacity:.35; }
+  .pinpanel .caption{ position:absolute; left:16px; bottom:16px; font-family:var(--font-mono); font-size:11px; color:var(--text-faint); letter-spacing:.06em; }
+
+  /* ================= FOOTER ================= */
+  footer{ padding:48px 0 40px; }
+  .foot-top{ display:flex; justify-content:space-between; gap:24px; flex-wrap:wrap; padding-bottom:32px; border-bottom:1px solid var(--border); }
+  .foot-brand .mark{ font-family:var(--font-display); font-weight:900; font-size:22px; }
+  .foot-links{ display:flex; gap:36px; flex-wrap:wrap; }
+  .foot-links h5{ font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:12px; font-weight:600; }
+  .foot-links ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .foot-links a{ font-size:13.6px; text-decoration:none; color:var(--text-muted); }
+  .foot-links a:hover{ color:var(--text); }
+
+  .disclaimer{
+    margin-top:28px; padding:20px 22px; background:var(--surface); border:1px solid var(--border);
+    border-radius:6px; font-size:13px; line-height:1.7; color:var(--text-muted);
+  }
+  .disclaimer b{ color:var(--text); }
+  .foot-bottom{ margin-top:22px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:12.3px; color:var(--text-faint); font-family:var(--font-mono); }
+  .foot-bottom .cookie-link{ background:none; border:none; padding:0; font:inherit; color:var(--text-faint); text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
+  .foot-bottom .cookie-link:hover{ color:var(--accent-strong); }
+
+  /* ================= COOKIES ================= */
+  .cookie-bar{
+    position:fixed; left:0; right:0; bottom:0; z-index:200;
+    display:flex; justify-content:center;
+    padding:16px clamp(16px,4vw,32px);
+    transform:translateY(120%); transition:transform .45s cubic-bezier(.2,.8,.2,1);
+    pointer-events:none;
+  }
+  .cookie-bar.show{ transform:translateY(0); pointer-events:auto; }
+  .cookie-card{
+    width:100%; max-width:840px;
+    background:var(--surface-2); border:1px solid var(--border-strong); border-radius:8px;
+    padding:22px 24px; display:flex; gap:22px; align-items:center; flex-wrap:wrap;
+    box-shadow:0 24px 60px -20px rgba(0,0,0,.6);
+  }
+  .cookie-card .ctext{ flex:1 1 340px; min-width:0; }
+  .cookie-card .ctext h4{ font-family:var(--font-body); font-weight:700; font-size:15px; margin-bottom:6px; }
+  .cookie-card .ctext p{ font-size:13.2px; color:var(--text-muted); }
+  .cookie-card .ctext a{ color:var(--accent-strong); text-decoration:underline; text-underline-offset:2px; }
+  .cookie-actions{ display:flex; gap:10px; flex-wrap:wrap; flex:0 0 auto; }
+
+  .modal-overlay{
+    position:fixed; inset:0; z-index:210; background:rgba(6,7,8,.72);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+    opacity:0; pointer-events:none; transition:opacity .25s ease;
+  }
+  .modal-overlay.show{ opacity:1; pointer-events:auto; }
+  .cookie-modal{
+    width:100%; max-width:520px; max-height:86vh; overflow:auto;
+    background:var(--surface); border:1px solid var(--border-strong); border-radius:8px;
+    padding:28px 26px;
+  }
+  .cookie-modal h3{ font-family:var(--font-body); font-weight:800; font-size:19px; }
+  .cookie-modal > p{ font-size:13.4px; color:var(--text-muted); margin-top:10px; }
+  .cookie-cats{ display:flex; flex-direction:column; gap:14px; margin-top:22px; }
+  .cookie-cat{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:16px;
+    padding:14px 16px; background:var(--bg-soft); border:1px solid var(--border); border-radius:6px;
+  }
+  .cookie-cat .cn{ font-weight:700; font-size:14px; }
+  .cookie-cat .cd{ font-size:12.6px; color:var(--text-faint); margin-top:4px; }
+  .switch{ position:relative; width:42px; height:24px; flex:none; }
+  .switch input{ position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; }
+  .switch .track{
+    position:absolute; inset:0; background:var(--border-strong); border-radius:20px; transition:background .18s ease;
+  }
+  .switch .knob{
+    position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%;
+    background:var(--text); transition:transform .18s ease;
+  }
+  .switch input:checked + .track{ background:var(--accent); }
+  .switch input:checked + .track .knob{ transform:translateX(18px); }
+  .switch input:disabled + .track{ background:var(--accent-soft); opacity:.7; cursor:not-allowed; }
+  .switch input:disabled{ cursor:not-allowed; }
+  .cookie-modal-actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:24px; flex-wrap:wrap; }
+
+  @media (max-width:520px){
+    .cookie-card{ flex-direction:column; align-items:stretch; }
+    .cookie-actions{ width:100%; }
+    .cookie-actions .btn{ flex:1; justify-content:center; }
+  }
+
+  /* ================= WATERMARK ================= */
+  .watermark{
+    position:fixed; right:16px; bottom:16px; z-index:150;
+    display:flex; align-items:center; gap:7px;
+    padding:8px 13px; border-radius:20px;
+    background:rgba(22,24,28,.78); backdrop-filter:blur(6px) saturate(140%);
+    border:1px solid var(--border-strong);
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--text-faint); text-decoration:none;
+    transition:color .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .watermark:hover{ color:var(--accent-strong); border-color:var(--accent); transform:translateY(-1px); }
+  .watermark .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent-strong); flex:none; }
+  @media (max-width:640px){ .watermark{ right:12px; bottom:12px; padding:7px 11px; font-size:10.3px; } }
+</style>
+
+<body>
+
+  <div class="ribbon">
+    🔧 <b>MODELL-ENTWURF</b> — unverbindlicher Gestaltungsvorschlag für Prowash Autoaufbereitung, kein offizieller Live-Auftritt. <a href="#disclaimer">Details unten ↓</a>
+  </div>
+
+  <header class="site">
+    <nav class="wrap">
+      <div class="brand">
+        <span class="mark">PROWASH</span>
+        <span class="sub">Autoaufbereitung</span>
+      </div>
+      <ul class="navlinks">
+        <li><a href="#leistungen">Leistungen</a></li>
+        <li><a href="#ablauf">Ablauf</a></li>
+        <li><a href="#team">Team</a></li>
+        <li><a href="#preise">Preise</a></li>
+        <li><a href="#kontakt">Kontakt</a></li>
+      </ul>
+      <div class="navcta">
+        <a class="btn btn-ghost btn-sm" href="tel:+4915738637912">0157 38637912</a>
+        <a class="btn btn-primary btn-sm" href="#kontakt">Termin anfragen</a>
+      </div>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow">Autoaufbereitung · Osnabrück</span>
+        <h1>Glanz, der<br>von Hand<br>kommt<em>.</em></h1>
+        <p class="lead">Prowash Autoaufbereitung wäscht, poliert und versiegelt Ihr Fahrzeug in Osnabrück – von der schonenden Handwäsche bis zur Keramikversiegelung. Gründlich, zuverlässig, mit Blick fürs letzte Detail.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="tel:+4915738637912">Jetzt anrufen</a>
+          <a class="btn btn-ghost" href="#leistungen">Leistungen ansehen</a>
+        </div>
+        <div class="trustrow">
+          <div class="trust-item"><span class="num">5,0 ★</span><span class="lbl">Ø-Bewertung</span></div>
+          <div class="trust-item"><span class="num">27</span><span class="lbl">Bewertungen</span></div>
+          <div class="trust-item"><span class="num">Sutthauser Str. 281</span><span class="lbl">49080 Osnabrück</span></div>
+        </div>
+      </div>
+      <div class="gloss reveal">
+        <div class="beads"></div>
+        <div class="sheen"></div>
+        <div class="frame"></div>
+        <div class="plate">
+          <span>Zustand<br><strong>Frisch versiegelt</strong></span>
+          <span style="text-align:right">Verfahren<br><strong>Keramik&nbsp;·&nbsp;Politur</strong></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="usp-strip">
+    <div class="wrap usp-grid">
+      <div class="usp reveal">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12c0-4 3-8 8-8s8 4 8 8-3 8-8 8-8-4-8-8Z"/><path d="M9 12l2 2 4-4"/></svg>
+        <div><div class="t">Reine Handarbeit</div><div class="d">Keine Waschstraße, keine Kratzer im Lack</div></div>
+      </div>
+      <div class="usp reveal">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 4v5c0 5-3.5 7.5-7 9-3.5-1.5-7-4-7-9V7l7-4Z"/></svg>
+        <div><div class="t">Schonende Produkte</div><div class="d">Oberflächenschonend, oft ganz ohne aggressive Chemie</div></div>
+      </div>
+      <div class="usp reveal">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2v20M17 5H9.5a2.5 2.5 0 0 0 0 5h5a2.5 2.5 0 0 1 0 5H7"/></svg>
+        <div><div class="t">Faire Preise</div><div class="d">Transparente Angebote statt Überraschungen</div></div>
+      </div>
+      <div class="usp reveal">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        <div><div class="t">Zuverlässig &amp; pünktlich</div><div class="d">Termin nach Vereinbarung, klare Abläufe</div></div>
+      </div>
+    </div>
+  </div>
+
+  <section id="leistungen">
+    <div class="wrap">
+      <div class="head reveal">
+        <div>
+          <span class="eyebrow">Leistungen</span>
+          <h2>Aufbereitung von innen<br>bis zur letzten Felge.</h2>
+        </div>
+        <p class="desc">Jede Leistung einzeln buchbar oder als Komplettpaket – abgestimmt auf Fahrzeug und Anspruch.</p>
+      </div>
+      <div class="services">
+        <div class="svc reveal">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 21c-2-3-2-6 0-9M17 21c2-3 2-6 0-9M12 3v6M8 9h8l2 5H6l2-5Z"/></svg>
+          <h3>Handwäsche</h3>
+          <p>Schonende Außenwäsche in Handarbeit – ohne Bürstenanlage, ohne feine Kratzer.</p>
+        </div>
+        <div class="svc reveal">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/></svg>
+          <h3>Lackpflege &amp; Politur</h3>
+          <p>Politur und Wachs für tiefen Glanz, aufgefrischte Farbe und spürbaren Schutz.</p>
+        </div>
+        <div class="svc reveal">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-4Z"/></svg>
+          <h3>Keramikversiegelung</h3>
+          <p>Langfristiger Schutz vor Witterung, UV-Strahlung und Straßenschmutz.</p>
+        </div>
+        <div class="svc reveal">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="6" width="16" height="12" rx="1.5"/><path d="M4 10h16M9 14h2"/></svg>
+          <h3>Innenraumaufbereitung</h3>
+          <p>Gründliche Reinigung von Armaturenbrett, Verkleidung, Fußraum und Details.</p>
+        </div>
+        <div class="svc reveal">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 18v-4a8 8 0 0 1 16 0v4M2 18h20"/></svg>
+          <h3>Polster- &amp; Teppichreinigung</h3>
+          <p>Tiefenreinigung für Sitze und Textilien – auch bei hartnäckigen Flecken.</p>
+        </div>
+        <div class="svc reveal">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h9l5 5v13H6V3Z"/><path d="M14 3v5h5"/></svg>
+          <h3>Kunststoff- &amp; Lederpflege</h3>
+          <p>Pflege für Kunststoffoberflächen und Leder, damit sie geschmeidig bleiben.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ablauf">
+    <div class="wrap">
+      <div class="head reveal">
+        <div>
+          <span class="eyebrow">Ablauf</span>
+          <h2>Vier Schritte<br>bis zur Übergabe.</h2>
+        </div>
+        <p class="desc">Klar strukturiert, ohne Überraschungen – vom ersten Anruf bis zum sauberen Fahrzeug.</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal"><span class="idx">01</span><h4>Anfrage</h4><p>Fahrzeug und Wunschtermin per Telefon durchgeben.</p></div>
+        <div class="step reveal"><span class="idx">02</span><h4>Vor-Ort-Check</h4><p>Kurze Begutachtung von Lack und Innenraum.</p></div>
+        <div class="step reveal"><span class="idx">03</span><h4>Aufbereitung</h4><p>Handwäsche, Politur und Innenraumpflege in Ruhe und mit System.</p></div>
+        <div class="step reveal"><span class="idx">04</span><h4>Übergabe</h4><p>Gemeinsame Endkontrolle, bevor der Wagen die Halle verlässt.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="vorher-nachher">
+    <div class="wrap">
+      <div class="head reveal">
+        <div>
+          <span class="eyebrow">Wirkung</span>
+          <h2>Den Unterschied<br>sieht man sofort.</h2>
+        </div>
+        <p class="desc">Regler ziehen, um den Effekt einer Aufbereitung anzudeuten.</p>
+      </div>
+      <div class="compare reveal">
+        <div class="cmp-layer cmp-before"></div>
+        <span class="cmp-label l">Vorher</span>
+        <div class="cmp-layer cmp-after" id="cmpAfter"></div>
+        <span class="cmp-label r">Nachher</span>
+        <div class="cmp-handle" id="cmpHandle"><div class="cmp-grip">↔</div></div>
+        <input class="cmp-range" type="range" min="0" max="100" value="50" id="cmpRange" aria-label="Vorher-Nachher-Regler">
+      </div>
+      <p class="cmp-note">Abstrakte, illustrative Darstellung — kein reales Vorher-Nachher-Foto eines Kundenfahrzeugs.</p>
+    </div>
+  </section>
+
+  <section id="team">
+    <div class="wrap">
+      <div class="head reveal">
+        <div>
+          <span class="eyebrow">Team</span>
+          <h2>Die Menschen<br>hinter dem Glanz.</h2>
+        </div>
+        <span class="tag fictive">Modellprofile · fiktiv</span>
+      </div>
+      <div class="team-note reveal">
+        <b>Hinweis:</b> Die folgenden Team-Profile sind frei erfunden und dienen nur der Veranschaulichung, wie ein Team-Bereich aussehen könnte. Namen, Rollen, Zitate und Avatare stellen keine realen Mitarbeitenden von Prowash Autoaufbereitung dar.
+      </div>
+      <div class="team-grid">
+        <div class="member reveal">
+          <span class="badge">Modell</span>
+          <div class="avatar a1">KR</div>
+          <h3>Kevin R.</h3>
+          <div class="role">Inhaber &amp; Aufbereitungsmeister</div>
+          <p class="bio">Beispielhafte Rollenbeschreibung: verantwortet Qualität und Endkontrolle jedes Fahrzeugs.</p>
+        </div>
+        <div class="member reveal">
+          <span class="badge">Modell</span>
+          <div class="avatar a2">LT</div>
+          <h3>Lena T.</h3>
+          <div class="role">Innenraum- &amp; Polsterspezialistin</div>
+          <p class="bio">Beispielhafte Rollenbeschreibung: zuständig für Innenraumaufbereitung und Textilpflege.</p>
+        </div>
+        <div class="member reveal">
+          <span class="badge">Modell</span>
+          <div class="avatar a3">AK</div>
+          <h3>Ahmet K.</h3>
+          <div class="role">Experte für Keramikversiegelung</div>
+          <p class="bio">Beispielhafte Rollenbeschreibung: begleitet Politur- und Versiegelungsarbeiten.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="stimmen">
+    <div class="wrap">
+      <div class="head reveal">
+        <div>
+          <span class="eyebrow">Stimmen</span>
+          <h2>Was Kund:innen<br>sagen könnten.</h2>
+        </div>
+        <span class="tag fictive">Beispielzitate · fiktiv</span>
+      </div>
+      <div class="quotes">
+        <div class="quote reveal">
+          <div class="stars">★★★★★</div>
+          <p>„Mein Wagen sah aus wie frisch abgeholt – der Innenraum riecht wieder wie am ersten Tag.“</p>
+          <div class="who">— M., Beispielkundin (fiktiv)</div>
+        </div>
+        <div class="quote reveal">
+          <div class="stars">★★★★★</div>
+          <p>„Termin war pünktlich, Ergebnis top, Preis fair kommuniziert. Genau so stelle ich mir Aufbereitung vor.“</p>
+          <div class="who">— T., Beispielkunde (fiktiv)</div>
+        </div>
+        <div class="quote reveal">
+          <div class="stars">★★★★★</div>
+          <p>„Die Keramikversiegelung hält, was sie verspricht – Wasser perlt einfach ab.“</p>
+          <div class="who">— S., Beispielkundin (fiktiv)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="preise">
+    <div class="wrap">
+      <div class="head reveal">
+        <div>
+          <span class="eyebrow">Preise</span>
+          <h2>Pakete zur<br>Orientierung.</h2>
+        </div>
+        <span class="tag fictive">Beispielpreise · unverbindlich</span>
+      </div>
+      <p class="price-note">Frei erfundene Beispielwerte zur Veranschaulichung der Struktur — keine echten Preise von Prowash Autoaufbereitung. Endgültige Preise bitte telefonisch erfragen.</p>
+      <div class="prices">
+        <div class="price reveal">
+          <h3>Basis</h3>
+          <div class="amount">49&nbsp;€<span> ab</span></div>
+          <ul>
+            <li>Handwäsche außen</li>
+            <li>Felgen &amp; Reifen</li>
+            <li>Fenster innen &amp; außen</li>
+            <li>Staubsaugen</li>
+          </ul>
+          <a class="btn btn-ghost btn-sm" style="margin-top:22px;justify-content:center" href="#kontakt">Anfragen</a>
+        </div>
+        <div class="price hi reveal">
+          <span class="pill">Beliebt</span>
+          <h3>Komfort</h3>
+          <div class="amount">129&nbsp;€<span> ab</span></div>
+          <ul>
+            <li>Alles aus „Basis“</li>
+            <li>Politur &amp; Wachs</li>
+            <li>Innenraumaufbereitung</li>
+            <li>Kunststoff- &amp; Lederpflege</li>
+          </ul>
+          <a class="btn btn-primary btn-sm" style="margin-top:22px;justify-content:center" href="#kontakt">Anfragen</a>
+        </div>
+        <div class="price reveal">
+          <h3>Premium</h3>
+          <div class="amount">249&nbsp;€<span> ab</span></div>
+          <ul>
+            <li>Alles aus „Komfort“</li>
+            <li>Keramikversiegelung</li>
+            <li>Polster-Tiefenreinigung</li>
+            <li>Endkontrolle mit Übergabe</li>
+          </ul>
+          <a class="btn btn-ghost btn-sm" style="margin-top:22px;justify-content:center" href="#kontakt">Anfragen</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="kontakt">
+    <div class="wrap">
+      <div class="contact-grid">
+        <div class="reveal">
+          <span class="eyebrow">Kontakt</span>
+          <h2>Fahrzeug anmelden,<br>Termin sichern.</h2>
+          <p class="lead" style="margin-top:16px;color:var(--text-muted);font-size:15.5px;">Anruf genügt — Fahrzeugtyp und Wunschtermin durchgeben, den Rest übernimmt Prowash.</p>
+          <div class="info-list">
+            <div class="info-row">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.4"/></svg>
+              <div><div class="k">Adresse</div><div class="v">Sutthauser Str. 281, 49080 Osnabrück</div></div>
+            </div>
+            <div class="info-row">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5c0 8.3 6.7 15 15 15l3-4-6-3-2 2c-2.5-1.3-4.7-3.5-6-6l2-2-3-6-4 3Z"/></svg>
+              <div><div class="k">Telefon</div><a class="v" href="tel:+4915738637912">0157 38637912</a></div>
+            </div>
+            <div class="info-row">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+              <div><div class="k">E-Mail <span style="color:var(--ice)">(Beispiel)</span></div><div class="v">info@prowash-aufbereitung.de</div></div>
+            </div>
+            <div class="info-row">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+              <div><div class="k">Öffnungszeiten <span style="color:var(--ice)">(Beispiel)</span></div><div class="v">Mo–Fr 9–18 Uhr · Sa nach Vereinbarung</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="pinpanel reveal">
+          <div class="grid-lines"></div>
+          <svg viewBox="0 0 200 200">
+            <circle cx="100" cy="90" r="46" fill="none" stroke="var(--border-strong)" stroke-width="1"/>
+            <circle cx="100" cy="90" r="30" fill="none" stroke="var(--accent-soft)" stroke-width="1"/>
+            <path d="M100 58c-14 0-24 10-24 23 0 17 24 41 24 41s24-24 24-41c0-13-10-23-24-23Z" fill="var(--accent)"/>
+            <circle cx="100" cy="80" r="8" fill="#0b0c0e"/>
+          </svg>
+          <span class="caption">Sutthauser Str. 281 · Osnabrück — schematische Darstellung</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-top">
+        <div class="foot-brand">
+          <span class="mark">PROWASH</span>
+          <div class="sub" style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.14em;color:var(--text-faint);text-transform:uppercase;margin-top:4px;">Autoaufbereitung · Osnabrück</div>
+        </div>
+        <div class="foot-links">
+          <div>
+            <h5>Seite</h5>
+            <ul>
+              <li><a href="#leistungen">Leistungen</a></li>
+              <li><a href="#team">Team</a></li>
+              <li><a href="#preise">Preise</a></li>
+              <li><a href="#kontakt">Kontakt</a></li>
+            </ul>
+          </div>
+          <div>
+            <h5>Kontakt</h5>
+            <ul>
+              <li><a href="tel:+4915738637912">0157 38637912</a></li>
+              <li><a href="#kontakt">Sutthauser Str. 281, Osnabrück</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="disclaimer" id="disclaimer">
+        <b>Zu dieser Seite:</b> Dies ist ein unverbindlicher Gestaltungsentwurf (Modellwebsite), erstellt um zu zeigen, wie ein professioneller Webauftritt für Prowash Autoaufbereitung aussehen könnte — sie ist <b>nicht</b> die offizielle Website des Unternehmens. Adresse und Leistungsübersicht orientieren sich an öffentlich auffindbaren Angaben. <b>Team-Profile, Kundenstimmen, Öffnungszeiten und Preise sind frei erfunden</b> und ausschließlich zur Veranschaulichung von Layout und Struktur gedacht.
+      </div>
+      <div class="foot-bottom">
+        <span>© 2026 · Modellentwurf, kein offizieller Auftritt</span>
+        <span style="display:flex;gap:18px;align-items:center;">
+          <button type="button" class="cookie-link" id="openCookieSettings">Cookie-Einstellungen</button>
+          <span>Erstellt als Website-Vorschlag</span>
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <div class="cookie-bar" id="cookieBar" role="dialog" aria-live="polite" aria-label="Cookie-Hinweis">
+    <div class="cookie-card">
+      <div class="ctext">
+        <h4>Diese Website nutzt Cookies</h4>
+        <p>Wir verwenden notwendige Cookies für den Betrieb der Seite sowie optional Statistik- und Marketing-Cookies, um die Seite zu verbessern. Details in den <a href="#" id="openCookieSettingsInline">Einstellungen</a>. <span style="color:var(--ice)">(Beispiel-Hinweis, Modellwebsite)</span></p>
+      </div>
+      <div class="cookie-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="cookieRejectAll">Nur notwendige</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="cookieOpenSettings">Einstellungen</button>
+        <button type="button" class="btn btn-primary btn-sm" id="cookieAcceptAll">Alle akzeptieren</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="cookieOverlay">
+    <div class="cookie-modal" role="dialog" aria-modal="true" aria-labelledby="cookieModalTitle">
+      <h3 id="cookieModalTitle">Cookie-Einstellungen</h3>
+      <p>Lege fest, welche Kategorien du zulassen möchtest. Notwendige Cookies sind für den Betrieb der Seite erforderlich und lassen sich nicht deaktivieren.</p>
+      <div class="cookie-cats">
+        <div class="cookie-cat">
+          <div>
+            <div class="cn">Notwendig</div>
+            <div class="cd">Erforderlich für grundlegende Funktionen, z. B. diese Einstellungen zu speichern.</div>
+          </div>
+          <label class="switch"><input type="checkbox" checked disabled><span class="track"><span class="knob"></span></span></label>
+        </div>
+        <div class="cookie-cat">
+          <div>
+            <div class="cn">Statistik</div>
+            <div class="cd">Hilft zu verstehen, wie Besucher:innen die Seite nutzen (Beispiel: Seitenaufrufe).</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="catStats"><span class="track"><span class="knob"></span></span></label>
+        </div>
+        <div class="cookie-cat">
+          <div>
+            <div class="cn">Marketing</div>
+            <div class="cd">Für personalisierte Inhalte und Anzeigen, z. B. bei künftiger Kampagnenmessung.</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="catMarketing"><span class="track"><span class="knob"></span></span></label>
+        </div>
+      </div>
+      <div class="cookie-modal-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="cookieRejectAll2">Nur notwendige</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="cookieSavePrefs">Auswahl speichern</button>
+        <button type="button" class="btn btn-primary btn-sm" id="cookieAcceptAll2">Alle akzeptieren</button>
+      </div>
+    </div>
+  </div>
+
+  <a class="watermark" href="https://hintage.de" target="_blank" rel="noopener">
+    <span class="dot"></span>Website von Hintage.de
+  </a>
+
+  <script>
+    // Scroll reveal
+    (function(){
+      var els = document.querySelectorAll('.reveal');
+      if (!('IntersectionObserver' in window)) { els.forEach(function(e){ e.classList.add('in'); }); return; }
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){
+          if (entry.isIntersecting){ entry.target.classList.add('in'); io.unobserve(entry.target); }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+      els.forEach(function(e){ io.observe(e); });
+    })();
+
+    // Before/after slider
+    (function(){
+      var range = document.getElementById('cmpRange');
+      var after = document.getElementById('cmpAfter');
+      var handle = document.getElementById('cmpHandle');
+      function update(){
+        var v = range.value;
+        after.style.clipPath = 'inset(0 0 0 ' + v + '%)';
+        handle.style.left = v + '%';
+      }
+      range.addEventListener('input', update);
+      update();
+    })();
+
+    // Cookie consent
+    (function(){
+      var STORAGE_KEY = 'prowash_cookie_consent';
+      var bar = document.getElementById('cookieBar');
+      var overlay = document.getElementById('cookieOverlay');
+      var catStats = document.getElementById('catStats');
+      var catMarketing = document.getElementById('catMarketing');
+
+      function readConsent(){
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : null;
+        } catch (e) { return null; }
+      }
+      function writeConsent(consent){
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(consent));
+        } catch (e) { /* Speicher nicht verfügbar (z. B. privates Fenster) — Banner erscheint dann erneut */ }
+      }
+      function applyConsent(consent){
+        // Hier würden echte Statistik-/Marketing-Skripte je nach consent.stats / consent.marketing geladen werden.
+        catStats.checked = !!consent.stats;
+        catMarketing.checked = !!consent.marketing;
+      }
+      function showBar(){ bar.classList.add('show'); }
+      function hideBar(){ bar.classList.remove('show'); }
+      function openModal(){ overlay.classList.add('show'); }
+      function closeModal(){ overlay.classList.remove('show'); }
+
+      function saveAndClose(consent){
+        writeConsent(Object.assign({ necessary:true, timestamp:new Date().toISOString() }, consent));
+        applyConsent(consent);
+        hideBar();
+        closeModal();
+      }
+
+      document.getElementById('cookieAcceptAll').addEventListener('click', function(){ saveAndClose({ stats:true, marketing:true }); });
+      document.getElementById('cookieAcceptAll2').addEventListener('click', function(){ saveAndClose({ stats:true, marketing:true }); });
+      document.getElementById('cookieRejectAll').addEventListener('click', function(){ saveAndClose({ stats:false, marketing:false }); });
+      document.getElementById('cookieRejectAll2').addEventListener('click', function(){ saveAndClose({ stats:false, marketing:false }); });
+      document.getElementById('cookieSavePrefs').addEventListener('click', function(){
+        saveAndClose({ stats: catStats.checked, marketing: catMarketing.checked });
+      });
+      document.getElementById('cookieOpenSettings').addEventListener('click', openModal);
+      document.getElementById('openCookieSettingsInline').addEventListener('click', function(e){ e.preventDefault(); openModal(); });
+      document.getElementById('openCookieSettings').addEventListener('click', function(){ hideBar(); openModal(); });
+      overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
+      document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
+
+      var existing = readConsent();
+      if (existing){
+        applyConsent(existing);
+      } else {
+        showBar();
+      }
+    })();
+  </script>
+
+</body>
