@@ -1,0 +1,1967 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1120" />
+<title>Santronic Gehirn-Simulator</title>
+<meta name="description" content="Interaktiver Simulator der Santronic-Steuereinheit: Plug-&-Play-Ports, Programm-Cartridges, Live-Vorschau und No-Code-Regeln." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>
+  // Tailwind-Theme: Tech-Blueprint-Farben
+  if (window.tailwind) {
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bp: { bg: '#0b1120', panel: '#111a2e', edge: '#22304d', ink: '#f8fafc', muted: '#94a3b8', live: '#22d3ee', cart: '#ef4444' }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
+          }
+        }
+      }
+    };
+  }
+</script>
+<style>
+  /* =========================================================
+     Basis & Blueprint-Look
+     ========================================================= */
+  :root {
+    --bg: #0b1120; --panel: #111a2e; --edge: #22304d; --ink: #f8fafc;
+    --muted: #94a3b8; --live: #22d3ee; --cart: #ef4444;
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+  html, body { background: var(--bg); color: var(--ink); }
+  body { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-tap-highlight-color: transparent; margin: 0; }
+  .blueprint {
+    background-image:
+      linear-gradient(rgba(34,211,238,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34,211,238,.045) 1px, transparent 1px),
+      linear-gradient(rgba(34,211,238,.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34,211,238,.022) 1px, transparent 1px);
+    background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
+  }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .panel { background: rgba(17,26,46,.9); border: 1px solid var(--edge); border-radius: 18px; }
+  .panel-title { font: 600 11px/1.2 "JetBrains Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0; }
+
+  /* Formular-Elemente */
+  .sel { background: #0b1324; border: 1px solid #2b3b5c; border-radius: 9px; padding: 7px 9px; color: var(--ink); font-size: 13px; max-width: 100%; }
+  .sel.is-invalid { border-color: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,.25); }
+  .sel:focus-visible, .btn:focus-visible, .tab:focus-visible, .pad-btn:focus-visible, .socket:focus-visible,
+  .shelf-item:focus-visible, .power:focus-visible, .bt-btn:focus-visible, #slot:focus-visible, input[type=range]:focus-visible {
+    outline: 2px solid var(--live); outline-offset: 2px;
+  }
+  input[type=range] { accent-color: var(--live); width: 100%; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; border: 1px solid #2b3b5c; background: #16213a; color: var(--ink);
+         border-radius: 10px; padding: .5rem .8rem; font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s, background .15s; }
+  .btn:hover:not(:disabled) { border-color: #38bdf8; }
+  .btn-live { background: rgba(34,211,238,.12); border-color: rgba(34,211,238,.5); color: #a5f3fc; }
+  .btn-red { background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.55); color: #fecaca; }
+  .btn-red:hover:not(:disabled) { border-color: #f87171; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* Tabs */
+  .tab { padding: .45rem .8rem; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; background: transparent; border: 0; }
+  .tab[aria-selected="true"] { background: rgba(34,211,238,.14); color: #e0faff; box-shadow: inset 0 0 0 1px rgba(34,211,238,.45); }
+
+  /* =========================================================
+     LEDs
+     ========================================================= */
+  .led { --c: #334155; width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none;
+         box-shadow: inset 0 -2px 3px rgba(0,0,0,.35); transition: background .2s; }
+  .led.is-on { box-shadow: 0 0 10px 1px var(--c), inset 0 -2px 3px rgba(0,0,0,.2); }
+  .led.pulse { animation: ledPulse 1.6s ease-in-out infinite; }
+  .led.blink { animation: ledBlink .5s steps(1) infinite; }
+  .led.blink-fast { animation: ledBlink .25s steps(1) infinite; }
+  @keyframes ledPulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  @keyframes ledBlink { 0% { opacity: 1; } 50% { opacity: .12; } }
+
+  /* =========================================================
+     Das Gehirn (Steuereinheit)
+     ========================================================= */
+  .brain { position: relative; border-radius: 26px; border: 1.5px solid #2b3b5c; background: linear-gradient(180deg, #141f36, #0d1528);
+           padding: 22px 16px 16px; transition: box-shadow .3s, border-color .3s; }
+  .brain.is-on { border-color: rgba(34,211,238,.45); box-shadow: 0 0 0 1px rgba(34,211,238,.12), 0 0 40px -12px rgba(34,211,238,.5); }
+  .brain.is-alarm { border-color: rgba(239,68,68,.85); box-shadow: 0 0 50px -6px rgba(239,68,68,.7); }
+  .screw { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #1e293b; border: 1px solid #3b4a66; }
+  .screw::after { content: ""; position: absolute; left: 1px; right: 1px; top: 3px; height: 1.5px; background: #5b6b88; transform: rotate(35deg); }
+  .power { width: 66px; height: 66px; border-radius: 50%; border: 2px solid #334155; background: radial-gradient(circle at 50% 35%, #1e293b, #0b1120);
+           color: #64748b; display: grid; place-items: center; transition: border-color .2s, color .2s, box-shadow .2s; cursor: pointer; flex: none; }
+  .power svg { width: 28px; height: 28px; }
+  .power.is-on { border-color: var(--live); color: var(--live); box-shadow: 0 0 0 4px rgba(34,211,238,.12), 0 0 28px rgba(34,211,238,.45); }
+  .power:active { transform: scale(.95); }
+  .bt-btn { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; border: 1px solid #2b3b5c; background: #0c1426; cursor: pointer; color: var(--ink); }
+  .bt-btn:hover { border-color: #38bdf8; }
+
+  /* Ports */
+  .port { --pc: #334155; border: 1.5px solid #2b3b5c; border-radius: 14px; background: #0c1426; padding: 10px; transition: border-color .25s, box-shadow .25s; min-width: 0; }
+  .port.is-active { border-color: var(--pc); box-shadow: 0 0 0 1px color-mix(in srgb, var(--pc) 35%, transparent), 0 0 22px -5px var(--pc); }
+  .socket { width: 100%; height: 48px; border-radius: 10px; border: 1.5px dashed #334155; display: grid; place-items: center; color: #64748b;
+            cursor: pointer; background: transparent; transition: border-color .2s, color .2s, background .2s; padding: 0 6px; }
+  .socket svg { width: 22px; height: 22px; flex: none; }
+  .port.is-plugged .socket { border-style: solid; color: #94a3b8; }
+  .port.is-active .socket { border-color: var(--pc); color: var(--pc); background: color-mix(in srgb, var(--pc) 12%, transparent); }
+  .snap { animation: snap .38s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes snap { 0% { transform: scale(.88); } 100% { transform: scale(1); } }
+
+  /* =========================================================
+     Cartridges (3DS-ähnliche Kassetten)
+     ========================================================= */
+  .cart { --cc: #ef4444; position: relative; width: 100%; aspect-ratio: .86; border-radius: 9px 9px 5px 5px;
+          background: linear-gradient(165deg, color-mix(in srgb, var(--cc) 70%, #fff) 0%, var(--cc) 35%, color-mix(in srgb, var(--cc) 70%, #000) 100%);
+          clip-path: polygon(0 0, 80% 0, 100% 13%, 100% 100%, 0 100%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); user-select: none; transition: transform .15s; }
+  .cart-label { position: absolute; left: 11%; right: 11%; top: 15%; bottom: 27%; background: #f8fafc; border-radius: 5px; color: #0f172a;
+                padding: 5px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; text-align: left; }
+  .cart-label .t { font-weight: 700; font-size: 10.5px; line-height: 1.15; overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto; }
+  .cart-label .b { font: 600 7.5px/1 "JetBrains Mono", monospace; letter-spacing: .08em; padding: 3px 4px; border-radius: 3px; align-self: flex-start; }
+  .cart-pins { position: absolute; left: 14%; right: 14%; bottom: 6%; height: 9%; background: repeating-linear-gradient(90deg, #e0b84a 0 3px, transparent 3px 6px); border-radius: 2px; }
+  .cart-grip { position: absolute; right: 4%; top: 32%; width: 4%; height: 28%; background: repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 2px, transparent 2px 4px); }
+  .shelf-item { cursor: grab; display: block; width: 100%; background: none; border: 0; padding: 4px; border-radius: 12px; color: inherit; }
+  .shelf-item:hover .cart { transform: translateY(-3px); }
+  .shelf-item.is-inserted { opacity: .35; cursor: pointer; }
+  .shelf-item.is-inserted .cart { filter: grayscale(.6); }
+
+  /* Easy-Play Slot */
+  .slot-wrap { position: relative; height: 70px; display: flex; align-items: flex-end; justify-content: center; cursor: pointer; border-radius: 12px; }
+  .slot-cart { width: 84px; height: 62px; overflow: hidden; }
+  .slot-cart .cart { animation: insertCart .35s ease-out; }
+  @keyframes insertCart { from { transform: translateY(-36px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .slot-mouth { height: 14px; width: min(70%, 240px); border-radius: 7px; background: #020617; border: 1.5px solid #3b2530;
+                box-shadow: inset 0 3px 6px rgba(0,0,0,.8); margin: 0 auto -7px; position: relative; z-index: 2; transition: border-color .2s, box-shadow .2s; }
+  .slot-mouth.is-target { border-color: var(--cart); box-shadow: 0 0 0 4px rgba(239,68,68,.25), inset 0 3px 6px rgba(0,0,0,.8); }
+  .slot-mouth.is-filled { border-color: rgba(239,68,68,.6); }
+  .loadbar { height: 4px; background: #1e293b; border-radius: 99px; overflow: hidden; }
+  .loadbar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--cart), #fca5a5); }
+  .loadbar.run > i { animation: load var(--dur, 1.4s) linear forwards; }
+  @keyframes load { to { width: 100%; } }
+  .spinner { width: 14px; height: 14px; border: 2px solid rgba(248,113,113,.3); border-top-color: #f87171; border-radius: 50%; animation: spin .8s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .shake { animation: shake .35s; }
+  @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+  /* Live-Wert-Karten */
+  .vcard { --pc: #334155; border: 1px solid var(--edge); border-left: 3px solid var(--pc); border-radius: 14px; padding: 12px; background: #0c1426; min-width: 0; }
+
+  /* Konsole */
+  .console { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; line-height: 1.55; }
+  .log-line { display: grid; grid-template-columns: auto 14px 1fr; gap: 8px; padding: 4px 0; border-bottom: 1px dashed rgba(148,163,184,.09); animation: fadeIn .25s; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+  /* Gamepad */
+  .pad-btn { width: 60px; height: 60px; border-radius: 14px; border: 1.5px solid #2b3b5c; background: #0f182c; color: #cbd5e1; display: grid; place-items: center;
+             touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; transition: background .1s, border-color .1s, box-shadow .1s; }
+  .pad-btn svg { width: 24px; height: 24px; }
+  .pad-btn.is-pressed, .pad-btn[aria-pressed="true"] { background: rgba(34,211,238,.18); border-color: var(--live); color: #fff; box-shadow: 0 0 16px -2px rgba(34,211,238,.6); }
+  #btnLight[aria-pressed="true"] { background: rgba(250,204,21,.16); border-color: #facc15; box-shadow: 0 0 16px -2px rgba(250,204,21,.6); }
+
+  /* Sandbox */
+  .rule { border: 1px solid var(--edge); border-radius: 14px; background: #0c1426; padding: 14px; }
+  .kw { display: inline-flex; align-items: center; font: 700 11px/1 "JetBrains Mono", monospace; letter-spacing: .08em; padding: 7px 9px; border-radius: 8px; min-width: 62px; justify-content: center; }
+  .kw-if { background: rgba(34,211,238,.14); color: #67e8f9; }
+  .kw-then { background: rgba(167,139,250,.16); color: #c4b5fd; }
+  .kw-else { background: rgba(148,163,184,.14); color: #cbd5e1; }
+  .live-item { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: #94a3b8; padding: 6px 0; }
+  .live-item .dot { width: 9px; height: 9px; border-radius: 50%; background: #334155; margin-top: 4px; flex: none; }
+  .live-item.is-hit { color: #e2e8f0; }
+  .live-item.is-hit .dot { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+
+  canvas { display: block; touch-action: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *:not(.led), *:not(.led)::before, *:not(.led)::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+  }
+</style>
+</head>
+<body class="blueprint min-h-screen">
+
+<!-- =========================================================
+     Kopfzeile mit Tabs
+     ========================================================= -->
+<header class="sticky top-0 z-30 border-b border-bp-edge bg-[#0b1120]/90 backdrop-blur">
+  <div class="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg border border-cyan-400/50 grid place-items-center text-cyan-300 shadow-[0_0_18px_-4px_rgba(34,211,238,.6)]">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+          <rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/><path d="M10 12h4M12 10v4"/>
+        </svg>
+      </div>
+      <div>
+        <div class="font-bold tracking-[.2em] text-sm">SANTRONIC</div>
+        <div class="text-[11px] text-slate-400">Gehirn-Simulator · Steuereinheit CORE-01</div>
+      </div>
+    </div>
+    <nav role="tablist" aria-label="Ansicht" class="flex gap-1 p-1 rounded-xl bg-[#0f182c] border border-bp-edge">
+      <button type="button" role="tab" id="tab-sim" aria-selected="true" aria-controls="view-sim" class="tab">Simulator</button>
+      <button type="button" role="tab" id="tab-sandbox" aria-selected="false" aria-controls="view-sandbox" class="tab">Eigene Logik bauen <span class="hidden sm:inline">(No-Code)</span></button>
+    </nav>
+  </div>
+</header>
+
+<main class="mx-auto max-w-7xl px-4 py-5">
+
+  <!-- =========================================================
+       ANSICHT 1: SIMULATOR
+       ========================================================= -->
+  <section id="view-sim" role="tabpanel" aria-labelledby="tab-sim" class="space-y-4">
+    <div class="grid gap-4 lg:grid-cols-12">
+
+      <!-- Cartridge-Regal -->
+      <aside class="panel p-4 lg:col-span-3 order-2 lg:order-1" aria-label="Cartridge-Regal">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="panel-title">Cartridge-Regal</h2>
+          <span class="text-[11px] text-slate-500">ziehen oder antippen</span>
+        </div>
+        <div id="shelf" class="grid grid-cols-4 lg:grid-cols-2 gap-2"></div>
+        <p class="mt-3 text-xs text-slate-400 leading-relaxed">
+          Jede Cartridge enthält ein fertiges Programm. Einfach in den <b class="text-red-300">Easy-Play Slot</b> oben am Gehirn stecken – fertig.
+          Nochmal antippen wirft sie wieder aus.
+        </p>
+      </aside>
+
+      <!-- Das Gehirn -->
+      <section class="panel p-4 sm:p-5 lg:col-span-5 order-1 lg:order-2" aria-label="Das Gehirn">
+        <div class="flex items-start justify-between gap-3 mb-1">
+          <div>
+            <h2 class="panel-title">Das Gehirn · Status &amp; Ports</h2>
+            <p class="text-[11px] text-slate-500 mt-1">① Einschalten&nbsp; ② Bauteile anstecken&nbsp; ③ Cartridge rein</p>
+          </div>
+          <span id="brainState" class="mono text-[11px] px-2 py-1 rounded-md border border-bp-edge text-slate-400 whitespace-nowrap">Aus</span>
+        </div>
+
+        <!-- Easy-Play Slot -->
+        <div class="relative mt-2">
+          <div id="slot" class="slot-wrap" tabindex="0" role="button" aria-label="Easy-Play Slot: Cartridge hier hineinziehen. Antippen wirft eine steckende Cartridge aus.">
+            <div id="slotEmpty" class="absolute inset-x-0 top-1 text-center text-xs text-slate-500 pointer-events-none">
+              <div class="mono tracking-[.2em] text-[10px] text-red-300/80">EASY-PLAY SLOT</div>
+              Cartridge hierher ziehen oder im Regal antippen
+            </div>
+            <div id="slotCart" class="slot-cart" hidden></div>
+          </div>
+          <div id="slotMouth" class="slot-mouth"></div>
+          <div id="slotLoading" class="absolute inset-x-0 top-0 h-[70px] grid place-items-center z-10" hidden>
+            <div class="bg-[#0b1120]/95 border border-red-500/40 rounded-xl px-4 py-3 w-[min(92%,300px)]">
+              <div class="flex items-center gap-2 text-[13px] font-semibold text-red-200"><span class="spinner"></span><span id="loadText">Lade Programm von Cartridge …</span></div>
+              <div id="loadBar" class="loadbar mt-2"><i></i></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gehäuse -->
+        <div id="brain" class="brain">
+          <span class="screw" style="top:8px;left:8px"></span><span class="screw" style="top:8px;right:8px"></span>
+          <span class="screw" style="bottom:8px;left:8px"></span><span class="screw" style="bottom:8px;right:8px"></span>
+
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <button type="button" id="powerBtn" class="power" aria-pressed="false" aria-label="Power-Knopf: Gehirn ein- oder ausschalten">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.3 7.2a8 8 0 1 0 11.4 0"/></svg>
+              </button>
+              <div class="space-y-1.5">
+                <div class="flex items-center gap-2 text-[11px] mono text-slate-400"><span id="ledPwr" class="led"></span>PWR</div>
+                <div class="flex items-center gap-2 text-[11px] mono text-slate-400"><span id="ledRun" class="led"></span>RUN</div>
+                <div class="flex items-center gap-2 text-[11px] mono text-slate-400"><span id="ledAlm" class="led"></span>ALARM</div>
+              </div>
+            </div>
+            <button type="button" id="btBtn" class="bt-btn" aria-label="Bluetooth verbinden oder trennen">
+              <span id="ledBt" class="led"></span>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg>
+              <span class="text-left leading-tight"><span class="block text-[10px] mono text-slate-500">BLUETOOTH</span><span id="btText" class="text-xs font-semibold">Aus</span></span>
+            </button>
+          </div>
+
+          <div class="my-4 flex items-center gap-3">
+            <div class="h-px flex-1 bg-gradient-to-r from-transparent to-[#2b3b5c]"></div>
+            <span class="mono text-[10px] tracking-[.25em] text-slate-500">SANTRONIC · CORE-01 · SNAP &amp; LOCK BUS</span>
+            <div class="h-px flex-1 bg-gradient-to-l from-transparent to-[#2b3b5c]"></div>
+          </div>
+
+          <div id="ports" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-3"></div>
+        </div>
+
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button type="button" id="btnPreset" class="btn btn-live">Standard-Auto zusammenstecken</button>
+          <button type="button" id="btnUnplug" class="btn">Alle Bauteile abziehen</button>
+          <button type="button" id="btnEject" class="btn btn-red">Cartridge auswerfen</button>
+        </div>
+      </section>
+
+      <!-- Live-Werte -->
+      <section class="panel p-4 lg:col-span-4 order-3" aria-label="Live-Werte der Ports">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="panel-title">Live-Werte der Ports</h2>
+          <span class="text-[11px] text-slate-500">passt sich automatisch an</span>
+        </div>
+        <div id="values" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1"></div>
+      </section>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-12">
+      <!-- Live-Vorschau + Gamepad -->
+      <section class="panel p-4 lg:col-span-7" aria-label="Live-Vorschau">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="panel-title">Live-Vorschau · Auto von oben</h2>
+          <span class="mono text-xs text-cyan-300"><span id="speedOut">0</span> cm/s</span>
+        </div>
+        <div class="flex flex-col md:flex-row gap-4">
+          <div class="flex-1 min-w-0">
+            <div id="cvWrap" class="rounded-xl overflow-hidden border border-bp-edge">
+              <canvas id="preview" aria-label="2D-Vorschau des Autos mit Ultraschall-Kegel und verschiebbarem Hindernis" role="img"></canvas>
+            </div>
+            <label class="block mt-3">
+              <span class="flex items-center justify-between text-xs text-slate-300">
+                <span>Hindernis-Abstand (Sensor-Test)</span>
+                <output class="mono text-cyan-300" data-dist-out>200 cm</output>
+              </span>
+              <input type="range" min="2" max="200" step="1" value="200" data-dist aria-label="Abstand des Hindernisses in Zentimetern" class="mt-1" />
+            </label>
+            <p class="text-[11px] text-slate-500 mt-1">Tipp: Du kannst das Hindernis auch direkt im Bild nach oben/unten ziehen.</p>
+          </div>
+
+          <div class="md:w-[212px] flex-none">
+            <div class="text-xs text-slate-400 mb-2 text-center">Gamepad <span class="text-slate-500">(Smartphone-Steuerung)</span></div>
+            <div id="pad" class="relative">
+              <div class="grid grid-cols-3 gap-2 w-[196px] mx-auto">
+                <span></span>
+                <button type="button" class="pad-btn" data-dir="up" aria-label="Vorwärts"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5 5 16h14z"/></svg></button>
+                <span></span>
+                <button type="button" class="pad-btn" data-dir="left" aria-label="Links"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 12 16 5v14z"/></svg></button>
+                <button type="button" class="pad-btn" id="btnLight" aria-pressed="false" aria-label="Licht ein/aus">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg>
+                </button>
+                <button type="button" class="pad-btn" data-dir="right" aria-label="Rechts"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 12 8 5v14z"/></svg></button>
+                <span></span>
+                <button type="button" class="pad-btn" data-dir="down" aria-label="Rückwärts"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 19 5 8h14z"/></svg></button>
+                <span></span>
+              </div>
+              <div id="padLock" class="absolute inset-0 rounded-xl bg-[#0b1120]/85 grid place-items-center text-center p-3">
+                <p id="padLockText" class="text-xs text-slate-300 leading-relaxed"></p>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-500 text-center mt-2">Tastatur: W A S D oder Pfeiltasten</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- System-Log -->
+      <section class="panel p-4 lg:col-span-5 flex flex-col" aria-label="System-Log">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="panel-title">Live-Konsole · Was denkt das Gehirn?</h2>
+          <button type="button" id="btnClearLog" class="text-xs text-slate-400 hover:text-cyan-300">Leeren</button>
+        </div>
+        <div class="relative flex-1 min-h-[320px]">
+          <div id="console" class="console absolute inset-0 overflow-y-auto pr-1" role="log" aria-live="polite"></div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       ANSICHT 2: SANDBOX (No-Code-Regeln)
+       ========================================================= -->
+  <section id="view-sandbox" role="tabpanel" aria-labelledby="tab-sandbox" hidden>
+    <div class="grid gap-4 lg:grid-cols-12">
+      <div class="panel p-4 sm:p-5 lg:col-span-8">
+        <h2 class="panel-title">Eigene Logik bauen (No-Code)</h2>
+        <p class="text-sm text-slate-300 mt-2 leading-relaxed">
+          Klicke Wenn-Dann-Regeln zusammen – ganz ohne Programmieren. Das Gehirn prüft deine Regeln ständig, viele Male pro Sekunde.
+          Greifen mehrere Regeln für dasselbe Ziel, gewinnt die <b>oberste</b>. „SONST“ wird ausgeführt, wenn für dieses Ziel keine Regel greift.
+        </p>
+        <label class="block mt-4 max-w-sm">
+          <span class="text-xs text-slate-400">Name deiner Cartridge</span>
+          <input id="cartName" type="text" maxlength="22" class="sel w-full mt-1" value="Meine Cartridge" />
+        </label>
+        <div id="rules" class="mt-4 space-y-3"></div>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button type="button" id="btnAddRule" class="btn">+ Regel hinzufügen</button>
+          <button type="button" id="btnExample" class="btn">Beispiel laden</button>
+        </div>
+        <p id="sbError" class="mt-3 text-sm text-red-300" role="alert" hidden></p>
+      </div>
+
+      <div class="lg:col-span-4 space-y-4">
+        <div class="panel p-4">
+          <h2 class="panel-title">Leere Cartridge</h2>
+          <div class="flex gap-4 items-center mt-3">
+            <div id="sbCart" class="w-[92px] flex-none"></div>
+            <div class="min-w-0">
+              <p id="sbStatus" class="text-sm text-slate-300"></p>
+              <p id="sbDirty" class="text-xs text-amber-300 mt-1" hidden>Ungespeicherte Änderungen</p>
+            </div>
+          </div>
+          <div id="sbWrite" class="mt-3" hidden>
+            <div class="flex items-center gap-2 text-xs text-red-200"><span class="spinner"></span>Schreibe Programm auf die Cartridge …</div>
+            <div id="sbBar" class="loadbar mt-2" style="--dur:1.1s"><i></i></div>
+          </div>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button type="button" id="btnSave" class="btn btn-red">Auf leere Cartridge speichern</button>
+            <button type="button" id="btnTest" class="btn btn-live">Einstecken &amp; testen</button>
+          </div>
+        </div>
+
+        <div class="panel p-4">
+          <h2 class="panel-title">Live-Test deiner Regeln</h2>
+          <label class="block mt-3">
+            <span class="flex items-center justify-between text-xs text-slate-300">
+              <span>Ultraschall-Abstand</span><output class="mono text-cyan-300" data-dist-out>200 cm</output>
+            </span>
+            <input type="range" min="2" max="200" step="1" value="200" data-dist aria-label="Abstand für den Regel-Test in Zentimetern" class="mt-1" />
+          </label>
+          <ul id="sbLive" class="mt-2"></ul>
+          <p class="text-xs text-slate-400 mt-2">Ergebnis: <span id="sbResult" class="text-slate-200"></span></p>
+          <p class="text-[11px] text-slate-500 mt-2">Diese Vorschau zeigt, was deine Entwürfe bei diesem Abstand tun würden – auch bevor du sie speicherst.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="mx-auto max-w-7xl px-4 pb-6 text-[11px] text-slate-500">
+  Santronic Gehirn-Simulator · Reine Simulation im Browser – es ist keine echte Hardware verbunden.
+</footer>
+
+<script>
+(() => {
+'use strict';
+
+/* =========================================================
+   1) KONSTANTEN & STAMMDATEN
+   ========================================================= */
+const PORT_IDS = ['A', 'B', 'C', 'D'];
+const MAX_RPM = 300;           // maximale Motordrehzahl (U/min)
+const MAX_STEER = 32;          // maximaler Lenkeinschlag des Servos in Grad
+const WHEEL_CIRC = 12.6;       // Radumfang in cm (4 cm Raddurchmesser)
+const MIN_D = 2, MAX_D = 200;  // Messbereich des Ultraschallsensors in cm
+const LOAD_MS = 1400;          // Dauer der Cartridge-Lade-Animation
+const MAX_RULES = 6;
+const LS_KEY = 'santronic_custom_cartridge_v1';
+
+// Einfache Strich-Icons für die Bauteile
+const ICONS = {
+  motor: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/>',
+  sonar: '<rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="8" cy="12" r="2.6"/><circle cx="16" cy="12" r="2.6"/>',
+  servo: '<rect x="4" y="10" width="12" height="9" rx="1.5"/><circle cx="10" cy="10" r="2"/><path d="M10 10 19 4"/>',
+  led: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>'
+};
+const svg = (inner) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+
+// Alle Bauteile, die man an einen Port stecken kann
+const COMPONENTS = {
+  empty:  { label: 'Leer',                              short: 'Leer',         color: '#475569' },
+  motorL: { label: 'Heck-Antriebsmotor (links)',        short: 'Motor links',  color: '#22d3ee', icon: 'motor' },
+  motorR: { label: 'Heck-Antriebsmotor (rechts)',       short: 'Motor rechts', color: '#38bdf8', icon: 'motor' },
+  sonar:  { label: 'Ultraschall-Frontsensor (Abstand)', short: 'Ultraschall',  color: '#a78bfa', icon: 'sonar' },
+  servo:  { label: 'Servo-Lenkung',                     short: 'Lenkung',      color: '#4ade80', icon: 'servo' },
+  led:    { label: 'LED-Lichtmodul',                    short: 'Licht',        color: '#facc15', icon: 'led' }
+};
+const COMPONENT_ORDER = ['empty', 'motorL', 'motorR', 'sonar', 'servo', 'led'];
+
+// Erklärung, die beim Einstecken eines Bauteils im Log erscheint
+const PLUG_HINTS = {
+  motorL: 'Er treibt das linke Hinterrad an. Die Drehzahl siehst du unter „Live-Werte“.',
+  motorR: 'Er treibt das rechte Hinterrad an. Die Drehzahl siehst du unter „Live-Werte“.',
+  sonar:  'Er misst wie eine Fledermaus per Echo den Abstand nach vorne. Teste ihn mit dem Abstands-Regler.',
+  servo:  'Sie dreht die Vorderräder nach links und rechts.',
+  led:    'Scheinwerfer und Warnblinker. Probiere den Knopf „Licht testen“.'
+};
+
+// Die Programm-Cartridges
+const CARTRIDGES = {
+  rc:       { name: 'RC-Sportwagen',        color: '#ef4444', ink: '#fff',    desc: 'Selbst fahren mit dem Gamepad' },
+  explorer: { name: 'Autonomer Entdecker',  color: '#3b82f6', ink: '#fff',    desc: 'Fährt allein & weicht unter 20 cm aus' },
+  guard:    { name: 'Wach-Roboter / Alarm', color: '#eab308', ink: '#0f172a', desc: 'Alarm bei Annäherung oder Bewegung' },
+  custom:   { name: 'Leere Cartridge',      color: '#e2e8f0', ink: '#0f172a', desc: '' }
+};
+
+// Bausteine für den No-Code-Editor
+const SENSORS = { sonar: 'Ultraschallsensor (Abstand)' };
+const OPS = { lt: 'kleiner als', gt: 'größer als' };
+const TARGETS = {
+  motors: { label: 'Motoren',            actions: { stop: 'Stoppen', forward: 'Vorwärts fahren', slow: 'Langsam vorwärts', backward: 'Rückwärts fahren' } },
+  steer:  { label: 'Lenkung',            actions: { left: 'Links einschlagen', straight: 'Geradeaus', right: 'Rechts einschlagen' } },
+  led:    { label: 'LED-Lichtmodul',     actions: { on: 'Einschalten', off: 'Ausschalten', blink: 'Blinken' } },
+  status: { label: 'Status-LEDs (Alarm)', actions: { alarm: 'Alarm blinken', calm: 'Ruhig bleiben' } }
+};
+// Satzbausteine für die Klartext-Vorschau („..., dann stoppen die Motoren.“)
+const ACTION_PHRASES = {
+  motors: { stop: 'stoppen die Motoren', forward: 'fahren die Motoren vorwärts', slow: 'fahren die Motoren langsam vorwärts', backward: 'fahren die Motoren rückwärts' },
+  steer:  { left: 'schlägt die Lenkung nach links ein', straight: 'steht die Lenkung geradeaus', right: 'schlägt die Lenkung nach rechts ein' },
+  led:    { on: 'geht das Licht an', off: 'geht das Licht aus', blink: 'blinkt das Licht' },
+  status: { alarm: 'blinken die Status-LEDs (Alarm)', calm: 'bleiben die Status-LEDs ruhig' }
+};
+const EXAMPLE_RULES = [
+  { sensor: 'sonar', op: 'lt', value: 30, target: 'motors', action: 'stop', elseAction: 'forward' },
+  { sensor: 'sonar', op: 'lt', value: 30, target: 'led', action: 'blink', elseAction: 'on' }
+];
+
+/* =========================================================
+   2) ZUSTAND
+   ========================================================= */
+const state = {
+  power: false, booting: false, bootToken: 0,
+  bt: 'off',                       // off | searching | connected | disconnected
+  ports: { A: 'empty', B: 'empty', C: 'empty', D: 'empty' },
+  cartridge: null,                 // physisch eingesteckte Cartridge
+  program: null,                   // aktuell laufendes Programm
+  loading: false, loadToken: 0,
+  distance: MAX_D,                 // Abstand Hindernis ↔ Sensor in cm
+  obstacleShift: 0,                // seitliche Verschiebung des Hindernisses (Ausweichmanöver)
+  draggingDistance: false,
+  lightManual: false,              // Licht-Taste im RC-Modus
+  ledTest: false,                  // „Licht testen“ ohne Programm
+  custom: null,                    // gespeicherte eigene Cartridge { name, rules }
+  draft: { name: 'Meine Cartridge', rules: EXAMPLE_RULES.map(r => ({ ...r })) },
+  saving: false,
+  tab: 'sim'
+};
+
+// Gedrückte Gamepad-Richtungen
+const input = { up: false, down: false, left: false, right: false };
+
+// Physik- und Programmzustand der Simulation
+const sim = {
+  time: 0, rpmL: 0, rpmR: 0, servo: 0, speed: 0,
+  phaseL: 0, phaseR: 0, phaseF: 0, groundY: 0, groundX: 0,
+  led: 'off', alarm: false, alarmUntil: 0,
+  explorer: { phase: 'drive', t: 0 },
+  guard: { armedAt: 0, armed: false, last: MAX_D, acc: 0, wasAlarm: false },
+  rc: { lastKey: '0,0' },
+  custom: { lastKey: '' }
+};
+
+/* =========================================================
+   3) HILFSFUNKTIONEN
+   ========================================================= */
+const $ = (sel, root = document) => root.querySelector(sel);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const mod = (a, n) => ((a % n) + n) % n;
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const portsWith = (type) => PORT_IDS.filter(p => state.ports[p] === type);
+const has = (type) => portsWith(type).length > 0;
+const hasMotor = () => has('motorL') || has('motorR');
+const motorPorts = () => PORT_IDS.filter(p => state.ports[p] === 'motorL' || state.ports[p] === 'motorR');
+const joinList = (arr) => arr.length <= 1 ? arr.join('') : arr.slice(0, -1).join(', ') + ' & ' + arr[arr.length - 1];
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const cartName = (id) => id === 'custom' ? (state.custom ? state.custom.name : 'Leere Cartridge') : CARTRIDGES[id].name;
+const cartDesc = (id) => id === 'custom'
+  ? (state.custom ? plural(state.custom.rules.length, 'eigene Regel', 'eigene Regeln') : 'Leer – im Tab „Eigene Logik“ beschreiben')
+  : CARTRIDGES[id].desc;
+const idleOutput = () => ({ throttle: 0, steer: 0, led: 'off', alarm: false, freeze: false });
+const restartAnim = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+
+/* =========================================================
+   4) LIVE-KONSOLE (anfängerfreundliches System-Log)
+   ========================================================= */
+const consoleEl = $('#console');
+const LOG_STYLES = {
+  info:   { icon: '›', cls: 'text-slate-300' },
+  ok:     { icon: '✔', cls: 'text-cyan-300' },
+  warn:   { icon: '!', cls: 'text-amber-300' },
+  action: { icon: '→', cls: 'text-white' },
+  alarm:  { icon: '⚠', cls: 'text-red-400' },
+  cart:   { icon: '▣', cls: 'text-red-300' }
+};
+const lastLogged = new Map();
+
+function log(type, msg) {
+  const style = LOG_STYLES[type] || LOG_STYLES.info;
+  const line = document.createElement('div');
+  line.className = 'log-line ' + style.cls;
+  const time = new Date().toLocaleTimeString('de-DE', { hour12: false });
+  const tEl = document.createElement('span'); tEl.className = 'text-slate-500 tabular-nums'; tEl.textContent = time;
+  const iEl = document.createElement('span'); iEl.className = 'text-center'; iEl.textContent = style.icon;
+  const mEl = document.createElement('span'); mEl.textContent = msg;
+  line.append(tEl, iEl, mEl);
+  consoleEl.appendChild(line);
+  while (consoleEl.childElementCount > 160) consoleEl.firstElementChild.remove();
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+// Meldung höchstens einmal pro Zeitfenster ausgeben (verhindert Log-Spam)
+function logOnce(key, type, msg, cooldown = 5000) {
+  const now = performance.now();
+  if (now - (lastLogged.get(key) || -Infinity) < cooldown) return;
+  lastLogged.set(key, now);
+  log(type, msg);
+}
+
+/* =========================================================
+   5) STROM & BLUETOOTH
+   ========================================================= */
+function later(token, ms, fn) {
+  setTimeout(() => { if (state.power && token === state.bootToken) fn(); }, ms);
+}
+
+function powerOn() {
+  state.power = true; state.booting = true; state.ledTest = false;
+  const token = ++state.bootToken;
+  log('ok', 'Power an – das Gehirn startet. Hallo!');
+  renderAll();
+  later(token, 600, () => {
+    log('info', 'Selbsttest: Prozessor, Speicher und Ports sind in Ordnung.');
+    scanPorts();
+  });
+  later(token, 1100, () => {
+    state.bt = 'searching'; renderBrain();
+    log('info', 'Bluetooth: Suche dein Smartphone …');
+  });
+  later(token, 2300, () => {
+    state.bt = 'connected'; state.booting = false;
+    log('ok', 'Bluetooth verbunden – dein Smartphone ist jetzt die Fernbedienung.');
+    renderAll();
+    if (state.cartridge) loadProgram(state.cartridge);
+    else log('info', 'Bereit. Stecke eine Cartridge in den Easy-Play Slot oben am Gehirn.');
+  });
+}
+
+function powerOff() {
+  state.power = false; state.booting = false; state.loading = false;
+  state.bootToken++; state.loadToken++;
+  state.program = null; state.bt = 'off'; state.ledTest = false;
+  resetProgramState();
+  clearInputs();
+  log('warn', 'Power aus – alle Motoren sind stromlos, das Programm ist angehalten.');
+  renderAll();
+}
+
+function scanPorts() {
+  const plugged = PORT_IDS.filter(p => state.ports[p] !== 'empty');
+  if (!plugged.length) {
+    log('warn', 'Keine Bauteile gefunden. Stecke Motoren oder Sensoren an die Ports A–D.');
+    return;
+  }
+  plugged.forEach(p => log('ok', `Port ${p} erkannt: ${COMPONENTS[state.ports[p]].label}.`));
+}
+
+function toggleBt() {
+  if (!state.power) { log('warn', 'Bluetooth funktioniert nur, wenn das Gehirn eingeschaltet ist.'); return; }
+  if (state.bt === 'searching') return;
+  if (state.bt === 'connected') {
+    state.bt = 'disconnected';
+    log('warn', 'Bluetooth getrennt. Das Gamepad auf dem Smartphone erreicht das Gehirn nicht mehr – Programme ohne Fernsteuerung laufen weiter.');
+    clearInputs();
+  } else {
+    state.bt = 'searching';
+    log('info', 'Bluetooth: Verbinde neu …');
+    const token = state.bootToken;
+    setTimeout(() => {
+      if (state.power && token === state.bootToken && state.bt === 'searching') {
+        state.bt = 'connected';
+        log('ok', 'Bluetooth wieder verbunden.');
+        renderBrain();
+      }
+    }, 1200);
+  }
+  renderBrain();
+}
+
+/* =========================================================
+   6) PORTS (Snap & Lock)
+   ========================================================= */
+function setPort(p, type) {
+  const prev = state.ports[p];
+  if (prev === type || !COMPONENTS[type]) return;
+  state.ports[p] = type;
+  if (!has('led')) state.ledTest = false;
+
+  restartAnim($(`.port[data-port="${p}"]`), 'snap');
+
+  if (!state.power) {
+    log('info', type === 'empty'
+      ? `Bauteil von Port ${p} abgezogen.`
+      : `${COMPONENTS[type].label} an Port ${p} gesteckt. Das Gehirn ist aus und erkennt es nach dem Einschalten.`);
+  } else if (type === 'empty') {
+    log('warn', `Port ${p}: ${COMPONENTS[prev].label} wurde abgezogen.`);
+  } else {
+    log('ok', `Port ${p} erkannt: ${COMPONENTS[type].label} – eingerastet. ${PLUG_HINTS[type]}`);
+  }
+
+  if (state.power && state.program) checkRequirements(state.program);
+  updatePorts();
+  renderValues();
+}
+
+function buildPorts() {
+  const wrap = $('#ports');
+  wrap.innerHTML = PORT_IDS.map(p => `
+    <div class="port" data-port="${p}">
+      <div class="flex items-center justify-between mb-2">
+        <span class="mono text-[11px] font-semibold tracking-widest text-slate-400">PORT ${p}</span>
+        <span class="led" data-port-led="${p}"></span>
+      </div>
+      <button type="button" class="socket" data-socket="${p}" aria-label="Port ${p}: nächstes Bauteil anstecken"></button>
+      <select class="sel w-full mt-2" data-port-select="${p}" aria-label="Bauteil an Port ${p}">
+        ${COMPONENT_ORDER.map(t => `<option value="${t}">${COMPONENTS[t].label}</option>`).join('')}
+      </select>
+    </div>`).join('');
+
+  wrap.addEventListener('change', (e) => {
+    const s = e.target.closest('[data-port-select]');
+    if (s) setPort(s.dataset.portSelect, s.value);
+  });
+  // Klick auf die Buchse wechselt reihum zum nächsten Bauteil
+  wrap.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-socket]');
+    if (!b) return;
+    const p = b.dataset.socket;
+    const i = COMPONENT_ORDER.indexOf(state.ports[p]);
+    setPort(p, COMPONENT_ORDER[(i + 1) % COMPONENT_ORDER.length]);
+  });
+}
+
+function updatePorts() {
+  PORT_IDS.forEach(p => {
+    const type = state.ports[p];
+    const c = COMPONENTS[type];
+    const el = $(`.port[data-port="${p}"]`);
+    const active = type !== 'empty' && state.power;
+    el.style.setProperty('--pc', c.color);
+    el.classList.toggle('is-active', active);
+    el.classList.toggle('is-plugged', type !== 'empty');
+    el.querySelector('[data-socket]').innerHTML = type === 'empty'
+      ? '<span class="text-[11px] text-slate-500">frei · antippen</span>'
+      : `<span class="flex items-center gap-2 min-w-0">${svg(ICONS[c.icon])}<span class="text-xs font-semibold truncate">${c.short}</span></span>`;
+    el.querySelector('select').value = type;
+    setLed(el.querySelector('[data-port-led]'), active ? c.color : '#334155', active ? 'on' : '');
+  });
+}
+
+function plugPreset() {
+  const preset = { A: 'sonar', B: 'motorL', C: 'motorR', D: 'servo' };
+  PORT_IDS.forEach((p, i) => setTimeout(() => setPort(p, preset[p]), i * 160));
+}
+
+/* =========================================================
+   7) CARTRIDGES (Easy-Play Slot)
+   ========================================================= */
+function cartHTML(id) {
+  const c = CARTRIDGES[id];
+  const badge = id === 'custom' ? (state.custom ? 'EIGENES PROGR.' : 'LEER') : 'EASY-PLAY';
+  return `<div class="cart" style="--cc:${c.color}">
+      <div class="cart-label">
+        <span class="t">${esc(cartName(id))}</span>
+        <span class="b" style="background:${id === 'custom' ? '#0f172a' : c.color};color:${id === 'custom' ? '#e2e8f0' : c.ink}">${badge}</span>
+      </div>
+      <div class="cart-grip"></div><div class="cart-pins"></div>
+    </div>`;
+}
+
+function renderShelf() {
+  $('#shelf').innerHTML = Object.keys(CARTRIDGES).map(id => {
+    const inserted = state.cartridge === id;
+    return `<div class="shelf-item ${inserted ? 'is-inserted' : ''}" role="button" tabindex="0" draggable="${!inserted}" data-cart="${id}"
+              aria-label="${inserted ? 'Auswerfen' : 'Einstecken'}: ${esc(cartName(id))}">
+        ${cartHTML(id)}
+        <span class="block mt-1.5 text-[10.5px] leading-tight text-slate-300 text-center">${inserted ? 'steckt im Slot' : esc(cartDesc(id))}</span>
+      </div>`;
+  }).join('');
+}
+
+function insertCartridge(id) {
+  if (!CARTRIDGES[id] || state.cartridge === id) return;
+  if (state.cartridge) ejectCartridge(true);
+  state.cartridge = id;
+  log('cart', `Cartridge „${cartName(id)}“ eingesteckt – klick! Sie ist eingerastet.`);
+  renderShelf(); renderSlot(true);
+  if (!state.power) {
+    log('info', 'Das Gehirn ist noch aus. Drück den Power-Knopf, dann wird das Programm geladen.');
+    renderBrain();
+    return;
+  }
+  if (state.booting) return; // wird nach dem Hochfahren automatisch geladen
+  loadProgram(id);
+}
+
+function ejectCartridge(silent) {
+  if (!state.cartridge) return;
+  const name = cartName(state.cartridge);
+  state.cartridge = null; state.program = null; state.loading = false; state.loadToken++;
+  resetProgramState();
+  clearInputs();
+  if (!silent) log('cart', `Cartridge „${name}“ ausgeworfen. Programm beendet, Motoren gestoppt.`);
+  renderShelf(); renderSlot(true); renderBrain();
+}
+
+function loadProgram(id) {
+  const token = ++state.loadToken;
+  state.program = null; state.loading = true; state.ledTest = false;
+  resetProgramState();
+  renderSlot(); renderBrain();
+  log('info', `Lade Programm von Cartridge „${cartName(id)}“ …`);
+  $('#loadText').textContent = 'Lade Programm von Cartridge …';
+  restartAnim($('#loadBar'), 'run');
+  setTimeout(() => { if (token === state.loadToken) $('#loadText').textContent = 'Prüfe angesteckte Bauteile …'; }, LOAD_MS * 0.4);
+  setTimeout(() => { if (token === state.loadToken) $('#loadText').textContent = 'Starte Programm …'; }, LOAD_MS * 0.75);
+  setTimeout(() => {
+    if (token !== state.loadToken || !state.power || state.cartridge !== id) return;
+    state.loading = false;
+    if (id === 'custom' && !state.custom) {
+      log('warn', 'Diese Cartridge ist noch leer – es gibt kein Programm zum Laden. Baue im Tab „Eigene Logik bauen“ eine Regel und speichere sie darauf.');
+      renderSlot(); renderBrain();
+      return;
+    }
+    state.program = id;
+    resetProgramState();
+    log('ok', `Programm „${cartName(id)}“ läuft!`);
+    explainProgram(id);
+    checkRequirements(id);
+    renderSlot(); renderBrain();
+  }, LOAD_MS);
+}
+
+function explainProgram(id) {
+  const texts = {
+    rc: 'So geht’s: Halte die Pfeile auf dem Gamepad gedrückt (oder W/A/S/D auf der Tastatur), um zu fahren. Die Glühbirne schaltet das Licht.',
+    explorer: 'So geht’s: Das Auto fährt allein los. Kommt ein Hindernis näher als 20 cm, stoppt es, fährt zurück und weicht aus. Schieb den Abstands-Regler, um es zu testen!',
+    guard: 'So geht’s: Das Auto bleibt stehen und passt auf. Kommt etwas näher als 60 cm oder bewegt sich etwas vor dem Sensor, blinken die Status-LEDs.'
+  };
+  if (texts[id]) { log('info', texts[id]); return; }
+  if (id === 'custom' && state.custom) {
+    state.custom.rules.forEach((r, i) => log('info', `Regel ${i + 1}: ${ruleSentence(r)}`));
+  }
+}
+
+// Prüft, ob alle Bauteile für ein Programm angesteckt sind, und erklärt, was fehlt
+function checkRequirements(id) {
+  const missing = [];
+  if ((id === 'rc' || id === 'explorer') && !hasMotor()) missing.push('mindestens ein Heck-Antriebsmotor');
+  if ((id === 'explorer' || id === 'guard') && !has('sonar')) missing.push('der Ultraschall-Frontsensor');
+  if (id === 'custom' && state.custom) {
+    const targets = new Set(state.custom.rules.map(r => r.target));
+    if (!has('sonar')) missing.push('der Ultraschall-Frontsensor (deine Regeln fragen ihn ab)');
+    if (targets.has('motors') && !hasMotor()) missing.push('mindestens ein Heck-Antriebsmotor');
+    if (targets.has('steer') && !has('servo') && !hasMotor()) missing.push('die Servo-Lenkung');
+    if (targets.has('led') && !has('led')) missing.push('das LED-Lichtmodul');
+  }
+  if (missing.length) log('warn', `Für dieses Programm fehlt noch ${joinList(missing)}. Stecke es an einen freien Port.`);
+  else log('ok', 'Alle benötigten Bauteile sind angesteckt.');
+  if (id === 'rc' && state.bt !== 'connected') log('warn', 'Achtung: Bluetooth ist nicht verbunden – das Gamepad funktioniert erst, wenn die BT-LED leuchtet.');
+}
+
+function resetProgramState() {
+  sim.explorer = { phase: 'drive', t: 0 };
+  sim.guard = { armedAt: performance.now() + 1200, armed: false, last: state.distance, acc: 0, wasAlarm: false };
+  sim.alarmUntil = 0; sim.alarm = false;
+  sim.rc.lastKey = '0,0';
+  sim.custom.lastKey = '';
+  state.obstacleShift = 0;
+  state.lightManual = false;
+  $('#btnLight').setAttribute('aria-pressed', 'false');
+}
+
+function renderSlot(force) {
+  const slotCart = $('#slotCart');
+  if (state.cartridge) {
+    if (force || slotCart.dataset.id !== state.cartridge) {
+      slotCart.innerHTML = cartHTML(state.cartridge);
+      slotCart.dataset.id = state.cartridge;
+    }
+    slotCart.hidden = false; $('#slotEmpty').hidden = true;
+  } else {
+    slotCart.innerHTML = ''; slotCart.dataset.id = '';
+    slotCart.hidden = true; $('#slotEmpty').hidden = false;
+  }
+  $('#slotMouth').classList.toggle('is-filled', !!state.cartridge);
+  $('#slotLoading').hidden = !state.loading;
+  $('#btnEject').disabled = !state.cartridge;
+}
+
+/* =========================================================
+   8) PROGRAMME DER CARTRIDGES
+   ========================================================= */
+
+// Cartridge 1: RC-Sportwagen – manuelles Fahren
+function runRC() {
+  const out = idleOutput();
+  out.led = state.lightManual ? 'on' : 'off';
+  const pressed = input.up || input.down || input.left || input.right;
+  if (state.bt !== 'connected') {
+    if (pressed) logOnce('rc-bt', 'warn', 'Keine Bluetooth-Verbindung – das Gehirn hört das Gamepad nicht. Tippe auf die Bluetooth-LED zum Verbinden.');
+    return out;
+  }
+  out.throttle = (input.up ? 1 : 0) - (input.down ? 1 : 0);
+  out.steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+
+  const key = `${out.throttle},${out.steer}`;
+  if (key !== sim.rc.lastKey) {
+    sim.rc.lastKey = key;
+    if (key === '0,0') logOnce('rc-stop', 'info', 'Gamepad losgelassen → Motoren bremsen bis zum Stillstand.', 2500);
+    else if (!hasMotor()) logOnce('rc-nomotor', 'warn', 'Gamepad gedrückt, aber es ist kein Motor angesteckt – nichts kann sich drehen.');
+    else logOnce('rc-' + key, 'action', describeDrive(out.throttle, out.steer), 1500);
+  }
+  if (out.throttle > 0 && has('sonar') && state.distance < 15) {
+    logOnce('rc-near', 'warn', `Achtung: Das Hindernis ist nur noch ${Math.round(state.distance)} cm entfernt!`, 3000);
+  }
+  return out;
+}
+
+function describeDrive(th, st) {
+  const mp = joinList(motorPorts());
+  const side = st < 0 ? 'links' : 'rechts';
+  const servoP = joinList(portsWith('servo'));
+  if (th !== 0) {
+    let s = `Gamepad: ${th > 0 ? 'Vorwärts' : 'Rückwärts'}${st ? ' + ' + side : ''} → Motoren an Port ${mp} drehen ${th > 0 ? 'vorwärts' : 'rückwärts'}`;
+    if (st && has('servo')) s += `, Servo an Port ${servoP} lenkt nach ${side}`;
+    else if (st) s += `, die Motoren drehen unterschiedlich schnell für die Kurve`;
+    return s + '.';
+  }
+  return has('servo')
+    ? `Gamepad: Lenkung ${side} → Servo an Port ${servoP} schlägt die Vorderräder ein (das Auto steht).`
+    : `Gamepad: Drehen nach ${side} → linker und rechter Motor drehen gegeneinander.`;
+}
+
+// Cartridge 2: Autonomer Entdecker – Hindernisvermeidung
+function setExplorerPhase(p) { sim.explorer.phase = p; sim.explorer.t = 0; }
+
+function runExplorer(dt) {
+  const out = idleOutput();
+  const ex = sim.explorer;
+  ex.t += dt;
+  if (!has('sonar')) {
+    logOnce('ex-sonar', 'warn', 'Der Entdecker braucht den Ultraschall-Frontsensor als „Augen“. Ohne ihn fährt er aus Sicherheitsgründen nicht los.', 8000);
+    return out;
+  }
+  if (!hasMotor()) {
+    logOnce('ex-motor', 'warn', 'Keine Heck-Antriebsmotoren angesteckt – der Entdecker kann denken, aber nicht fahren.', 8000);
+    return out;
+  }
+  const d = Math.round(state.distance);
+  const mp = joinList(motorPorts());
+  switch (ex.phase) {
+    case 'drive':
+      out.throttle = 0.55; out.led = 'on';
+      if (state.distance < 20) {
+        setExplorerPhase('stop');
+        log('action', `Hindernis bei ${d} cm erkannt (näher als 20 cm) → Stoppe Motoren an Port ${mp}!`);
+      }
+      break;
+    case 'stop':
+      out.led = 'blink';
+      if (ex.t > 0.6) {
+        setExplorerPhase('reverse');
+        log('action', `Fahre rückwärts, um Abstand zu gewinnen (Motoren an Port ${mp} drehen andersherum).`);
+      }
+      break;
+    case 'reverse':
+      out.throttle = -0.45; out.led = 'blink';
+      if (state.distance >= 45 || (ex.t > 4 && !state.draggingDistance)) {
+        setExplorerPhase('turn');
+        log('action', `Genug Abstand (${d} cm). Lenke nach rechts, um am Hindernis vorbeizufahren.`);
+      }
+      break;
+    case 'turn':
+      out.throttle = 0.4; out.steer = 1; out.led = 'on'; out.freeze = true;
+      state.obstacleShift = -0.75 * Math.min(1, ex.t / 1.4); // Hindernis wandert aus dem Fahrweg
+      if (ex.t > 1.4 && !state.draggingDistance) {
+        state.distance = MAX_D; state.obstacleShift = 0;
+        setExplorerPhase('drive');
+        log('ok', 'Hindernis umfahren – der Weg ist frei. Fahre weiter geradeaus.');
+      }
+      break;
+  }
+  return out;
+}
+
+// Cartridge 3: Wach-Roboter – Alarm bei Annäherung oder Bewegung
+function runGuard(dt, now) {
+  const out = idleOutput();
+  const g = sim.guard;
+  if (!has('sonar')) {
+    logOnce('guard-sonar', 'warn', 'Der Wach-Roboter braucht den Ultraschallsensor als „Auge“. Stecke ihn an einen Port.', 8000);
+    return out;
+  }
+  if (now < g.armedAt) return out;
+  if (!g.armed) {
+    g.armed = true; g.last = state.distance;
+    log('ok', 'Wach-Modus scharf geschaltet. Ich passe auf!');
+  }
+  // Alle 0,25 s vergleichen: Annäherung (< 60 cm) oder Bewegung (Abstand ändert sich um ≥ 3 cm)
+  g.acc += dt;
+  if (g.acc >= 0.25) {
+    const d = state.distance;
+    const delta = Math.abs(d - g.last);
+    g.last = d; g.acc = 0;
+    const near = d < 60, moved = delta >= 3;
+    if (near || moved) {
+      if (now > sim.alarmUntil) {
+        const extra = has('led') ? ' + Lichtmodul blinkt' : '';
+        log('alarm', near
+          ? `Annäherung erkannt: Etwas ist nur ${Math.round(d)} cm entfernt! ALARM – Status-LEDs blinken${extra}.`
+          : `Bewegung vor dem Sensor erkannt (Abstand hat sich um ${Math.round(delta)} cm verändert)! ALARM – Status-LEDs blinken${extra}.`);
+      }
+      sim.alarmUntil = now + 2500;
+    }
+  }
+  out.alarm = now < sim.alarmUntil;
+  if (g.wasAlarm && !out.alarm) log('ok', 'Alles wieder ruhig. Der Wach-Roboter passt weiter auf.');
+  g.wasAlarm = out.alarm;
+  out.led = out.alarm ? 'blink' : 'off';
+  return out;
+}
+
+// Cartridge 4: eigene Regeln aus dem No-Code-Editor
+function evaluateRules(rules, d, sensorOk) {
+  const actions = {}, elseCand = {}, active = [];
+  rules.forEach((r, i) => {
+    if (!validValue(r.value)) return;
+    const cond = sensorOk && (r.op === 'lt' ? d < r.value : d > r.value);
+    if (cond) {
+      active.push(i);
+      if (!(r.target in actions)) actions[r.target] = r.action;
+    } else if (r.elseAction !== 'none' && !(r.target in elseCand)) {
+      elseCand[r.target] = r.elseAction;
+    }
+  });
+  for (const t in elseCand) if (!(t in actions)) actions[t] = elseCand[t];
+  return { actions, active };
+}
+
+function describeActions(actions) {
+  const parts = Object.keys(actions).map(t => `${TARGETS[t].label}: ${TARGETS[t].actions[actions[t]]}`);
+  return parts.length ? parts.join(', ') : 'keine Aktion – alles bleibt aus';
+}
+
+function runCustom() {
+  const out = idleOutput();
+  if (!state.custom) return out;
+  const sensorOk = has('sonar');
+  if (!sensorOk) logOnce('cu-sonar', 'warn', 'Deine Regeln fragen den Ultraschallsensor ab, er ist aber nicht angesteckt. Ohne Messwert greift nur „SONST“.', 8000);
+  const rules = state.custom.rules;
+  const res = evaluateRules(rules, state.distance, sensorOk);
+  const a = res.actions;
+  out.throttle = { stop: 0, forward: 0.55, slow: 0.28, backward: -0.4 }[a.motors] ?? 0;
+  out.steer = { left: -1, straight: 0, right: 1 }[a.steer] ?? 0;
+  out.led = a.led || 'off';
+  out.alarm = a.status === 'alarm';
+
+  const key = res.active.join(',') + '|' + JSON.stringify(a);
+  if (key !== sim.custom.lastKey) {
+    sim.custom.lastKey = key;
+    const d = Math.round(state.distance);
+    if (res.active.length) {
+      const which = res.active.map(i => `Regel ${i + 1} (${d} cm ist ${OPS[rules[i].op]} ${rules[i].value} cm)`).join(' und ');
+      log('action', `${which} ${res.active.length > 1 ? 'greifen' : 'greift'} → ${describeActions(a)}.`);
+    } else {
+      log('action', `Keine WENN-Bedingung erfüllt (${sensorOk ? d + ' cm' : 'kein Sensor'}) → ${Object.keys(a).length ? 'SONST: ' + describeActions(a) : 'nichts zu tun'}.`);
+    }
+    if (a.led && !has('led')) logOnce('cu-led', 'warn', 'Eine Regel will das Licht steuern, aber es ist kein LED-Lichtmodul angesteckt.', 8000);
+    if (a.motors && a.motors !== 'stop' && !hasMotor()) logOnce('cu-motor', 'warn', 'Eine Regel will fahren, aber es ist kein Motor angesteckt.', 8000);
+  }
+  return out;
+}
+
+/* =========================================================
+   9) SIMULATION (Physik pro Frame)
+   ========================================================= */
+function step(dt, now) {
+  let out = idleOutput();
+  const running = state.power && !state.loading && state.program;
+  if (running) {
+    if (state.program === 'rc') out = runRC();
+    else if (state.program === 'explorer') out = runExplorer(dt);
+    else if (state.program === 'guard') out = runGuard(dt, now);
+    else if (state.program === 'custom') out = runCustom();
+  } else if (state.power && state.ledTest) {
+    out.led = 'on';
+  }
+
+  sim.alarm = state.power && out.alarm;
+  sim.led = state.power && has('led') ? out.led : 'off';
+
+  // Mischung: Mit Servo lenken die Vorderräder, ohne Servo lenken die Motoren (Differenzial)
+  const hasServo = has('servo');
+  let l = out.throttle, r = out.throttle;
+  if (!hasServo) { l += out.steer * 0.5; r -= out.steer * 0.5; }
+  l = clamp(l, -1, 1); r = clamp(r, -1, 1);
+
+  const targetL = state.power && has('motorL') ? l * MAX_RPM : 0;
+  const targetR = state.power && has('motorR') ? r * MAX_RPM : 0;
+  const k = Math.min(1, dt * 5); // Motoren beschleunigen/bremsen weich
+  sim.rpmL += (targetL - sim.rpmL) * k;
+  sim.rpmR += (targetR - sim.rpmR) * k;
+  if (Math.abs(sim.rpmL) < 0.5) sim.rpmL = 0;
+  if (Math.abs(sim.rpmR) < 0.5) sim.rpmR = 0;
+
+  const targetServo = state.power && hasServo ? out.steer * MAX_STEER : 0;
+  sim.servo += (targetServo - sim.servo) * Math.min(1, dt * 8);
+
+  // Geschwindigkeit aus der mittleren Raddrehzahl (cm/s)
+  sim.speed = ((sim.rpmL + sim.rpmR) / 2) / 60 * WHEEL_CIRC;
+
+  // Fährt das Auto, ändert sich der Abstand zum Hindernis
+  let moving = sim.speed;
+  if (!state.draggingDistance && !out.freeze) {
+    const nd = state.distance - sim.speed * dt;
+    if (nd <= MIN_D && sim.speed > 0) {
+      moving = 0;
+      logOnce('bump', 'warn', 'Rums! Das Auto steht direkt am Hindernis. Fahr rückwärts oder schieb das Hindernis weg.', 4000);
+    }
+    state.distance = clamp(nd, MIN_D, MAX_D);
+  }
+
+  // Rad-Animation & scrollender Boden
+  sim.phaseL += (sim.rpmL / 60) * dt;
+  sim.phaseR += (sim.rpmR / 60) * dt;
+  sim.phaseF += (moving / WHEEL_CIRC) * dt;
+  const g = geom();
+  sim.groundY += moving * dt * g.ppc;
+  const lateral = hasServo ? Math.sin(sim.servo * Math.PI / 180) * moving : (sim.rpmL - sim.rpmR) / MAX_RPM * 40;
+  sim.groundX -= lateral * dt * g.ppc;
+}
+
+/* =========================================================
+   10) 2D-VORSCHAU (Canvas)
+   ========================================================= */
+const cv = $('#preview');
+const ctx = cv.getContext('2d');
+let CW = 0, CH = 0, DPR = 1, dragObstacle = false;
+
+function resizeCanvas() {
+  const w = cv.parentElement.clientWidth;
+  if (!w) return;
+  const h = Math.round(clamp(w * 0.72, 280, 420));
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(w * DPR); cv.height = Math.round(h * DPR);
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  CW = w; CH = h;
+}
+
+// Geometrie: Auto unten, darüber 200 cm Messbereich
+function geom() {
+  const carW = Math.min(78, Math.max(52, CW * 0.17));
+  const carL = carW * 1.6;
+  const carX = CW / 2 - carW / 2;
+  const carTop = CH - 18 - carL;
+  const rangeTop = 30;
+  const ppc = Math.max(0.1, (carTop - rangeTop) / MAX_D);
+  return { carW, carL, carX, carTop, ppc };
+}
+
+function rr(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function draw() {
+  if (!CW) return;
+  const t = sim.time;
+  const g = geom();
+  const cx = CW / 2, fy = g.carTop;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#0a1222';
+  ctx.fillRect(0, 0, CW, CH);
+
+  // Boden-Raster (bewegt sich beim Fahren)
+  const sp = 28, oy = mod(sim.groundY, sp), ox = mod(sim.groundX, sp);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(56,189,248,.07)';
+  ctx.beginPath();
+  for (let y = oy - sp; y < CH; y += sp) { ctx.moveTo(0, y + .5); ctx.lineTo(CW, y + .5); }
+  for (let x = ox - sp; x < CW; x += sp) { ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, CH); }
+  ctx.stroke();
+
+  // Entfernungsmarken
+  ctx.font = '10px "JetBrains Mono", monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  [20, 50, 100, 150, 200].forEach(cm => {
+    const y = fy - cm * g.ppc;
+    const crit = cm === 20;
+    ctx.strokeStyle = crit ? 'rgba(239,68,68,.45)' : 'rgba(148,163,184,.14)';
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath(); ctx.moveTo(8, y); ctx.lineTo(CW - 8, y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = crit ? 'rgba(248,113,113,.9)' : 'rgba(148,163,184,.55)';
+    ctx.fillText(`${cm} cm`, 10, y - 8);
+  });
+
+  if (state.power && has('sonar')) drawCone(g, cx, fy, t);
+  drawObstacle(g, cx, fy);
+  drawCar(g, t);
+
+  // Statusanzeige oben rechts
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.font = '600 11px Inter, sans-serif';
+  ctx.fillStyle = state.program ? '#e2e8f0' : '#64748b';
+  ctx.fillText(state.program ? `▶ ${cartName(state.program)}` : (state.loading ? 'Lädt …' : 'Kein Programm'), CW - 10, 8);
+  if (sim.alarm && Math.floor(t * 4) % 2 === 0) {
+    ctx.fillStyle = '#f87171';
+    ctx.fillText('ALARM', CW - 10, 24);
+  }
+
+  if (!state.power) {
+    ctx.fillStyle = 'rgba(2,6,23,.6)';
+    ctx.fillRect(0, 0, CW, CH);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#e2e8f0'; ctx.font = '600 15px Inter, sans-serif';
+    ctx.fillText('Das Gehirn ist aus', CW / 2, CH / 2 - 10);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '12px Inter, sans-serif';
+    ctx.fillText('Drück den Power-Knopf am Gehirn', CW / 2, CH / 2 + 12);
+  }
+}
+
+// Ultraschall-Kegel (15° nach links und rechts)
+function drawCone(g, cx, fy, t) {
+  const inPath = Math.abs(state.obstacleShift) < 0.25;
+  const d = inPath ? Math.min(state.distance, MAX_D) : MAX_D;
+  const half = Math.tan(15 * Math.PI / 180);
+  const rgb = d < 20 ? '239,68,68' : d < 50 ? '245,158,11' : '34,211,238';
+  const full = MAX_D * g.ppc, len = d * g.ppc;
+
+  ctx.strokeStyle = `rgba(${rgb},.28)`;
+  ctx.setLineDash([4, 6]);
+  ctx.beginPath();
+  ctx.moveTo(cx, fy); ctx.lineTo(cx - full * half, fy - full);
+  ctx.moveTo(cx, fy); ctx.lineTo(cx + full * half, fy - full);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const grd = ctx.createLinearGradient(0, fy, 0, fy - len);
+  grd.addColorStop(0, `rgba(${rgb},.38)`);
+  grd.addColorStop(1, `rgba(${rgb},.1)`);
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.moveTo(cx, fy); ctx.lineTo(cx - len * half, fy - len); ctx.lineTo(cx + len * half, fy - len);
+  ctx.closePath(); ctx.fill();
+
+  // Echo-Wellen
+  const a = 15 * Math.PI / 180, L = Math.max(len, 1);
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 3; i++) {
+    const r = mod(t * 140 + i * L / 3, L);
+    ctx.strokeStyle = `rgba(${rgb},${(0.55 * (1 - r / L)).toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(cx, fy, r, -Math.PI / 2 - a, -Math.PI / 2 + a); ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+}
+
+function drawObstacle(g, cx, fy) {
+  const ow = Math.min(150, CW * 0.42), oh = 20;
+  const face = fy - Math.min(state.distance, MAX_D) * g.ppc;
+  const x = cx - ow / 2 + state.obstacleShift * CW, y = face - oh;
+  const far = state.distance >= MAX_D;
+  ctx.save();
+  ctx.globalAlpha = far ? 0.5 : 1;
+  rr(x, y, ow, oh, 4); ctx.fillStyle = '#283548'; ctx.fill();
+  ctx.save(); rr(x, y, ow, oh, 4); ctx.clip();
+  ctx.strokeStyle = 'rgba(148,163,184,.22)'; ctx.beginPath();
+  for (let i = -oh; i < ow; i += 9) { ctx.moveTo(x + i, y + oh); ctx.lineTo(x + i + oh, y); }
+  ctx.stroke(); ctx.restore();
+  rr(x, y, ow, oh, 4); ctx.strokeStyle = dragObstacle ? '#22d3ee' : '#94a3b8'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#e2e8f0'; ctx.font = '600 11px Inter, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(far ? 'Hindernis · >200 cm' : `Hindernis · ${Math.round(state.distance)} cm`, x + ow / 2, y + oh / 2 + .5);
+  ctx.restore();
+  ctx.lineWidth = 1;
+}
+
+function drawWheel(cx, cy, ww, wl, ang, phase, color) {
+  ctx.save();
+  ctx.translate(cx, cy); ctx.rotate(ang);
+  rr(-ww / 2, -wl / 2, ww, wl, 3); ctx.fillStyle = '#060b17'; ctx.fill();
+  ctx.save(); rr(-ww / 2, -wl / 2, ww, wl, 3); ctx.clip();
+  const s = wl / 4, off = mod(-phase * s * 2.2, s);
+  ctx.strokeStyle = 'rgba(148,163,184,.5)'; ctx.lineWidth = 2; ctx.beginPath();
+  for (let yy = -wl / 2 - s + off; yy < wl / 2 + s; yy += s) { ctx.moveTo(-ww / 2, yy); ctx.lineTo(ww / 2, yy); }
+  ctx.stroke(); ctx.restore();
+  rr(-ww / 2, -wl / 2, ww, wl, 3); ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.restore();
+}
+
+function drawCar(g, t) {
+  const { carW: w, carL: l, carX: x, carTop: y } = g;
+  const blinkOn = Math.floor(t * 4) % 2 === 0;
+  const on = state.power;
+
+  // Alarm-Ring
+  if (sim.alarm && blinkOn) {
+    rr(x - 22, y - 12, w + 44, l + 22, 22);
+    ctx.fillStyle = 'rgba(239,68,68,.12)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(239,68,68,.9)'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.lineWidth = 1;
+  }
+
+  // Scheinwerfer-Lichtkegel
+  const lit = has('led') && (sim.led === 'on' || (sim.led === 'blink' && blinkOn));
+  if (lit) {
+    [x + w * 0.2, x + w * 0.8].forEach(lx => {
+      const grd = ctx.createRadialGradient(lx, y, 1, lx, y, l * 0.9);
+      grd.addColorStop(0, 'rgba(253,224,71,.45)'); grd.addColorStop(1, 'rgba(253,224,71,0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.moveTo(lx - 4, y); ctx.lineTo(lx - w * 0.45, y - l * 0.85); ctx.lineTo(lx + w * 0.45, y - l * 0.85); ctx.closePath(); ctx.fill();
+    });
+  }
+
+  // Räder (außen am Chassis)
+  const ww = w * 0.22, wl = l * 0.24;
+  const frontY = y + l * 0.2, rearY = y + l * 0.78;
+  const lxW = x - ww / 2 + 2, rxW = x + w + ww / 2 - 2;
+  const servoRad = sim.servo * Math.PI / 180;
+  const frontColor = on && has('servo') ? '#4ade80' : '#475569';
+  const rearColor = (rpm, plugged) => on && plugged ? (Math.abs(rpm) > 3 ? '#22d3ee' : '#0e7490') : '#475569';
+  drawWheel(lxW, frontY, ww, wl, servoRad, sim.phaseF, frontColor);
+  drawWheel(rxW, frontY, ww, wl, servoRad, sim.phaseF, frontColor);
+  drawWheel(lxW, rearY, ww, wl, 0, has('motorL') ? sim.phaseL : sim.phaseF, rearColor(sim.rpmL, has('motorL')));
+  drawWheel(rxW, rearY, ww, wl, 0, has('motorR') ? sim.phaseR : sim.phaseF, rearColor(sim.rpmR, has('motorR')));
+
+  // Chassis
+  const body = ctx.createLinearGradient(x, 0, x + w, 0);
+  body.addColorStop(0, '#18243b'); body.addColorStop(0.5, '#22314f'); body.addColorStop(1, '#18243b');
+  rr(x, y, w, l, w * 0.28); ctx.fillStyle = body; ctx.fill();
+  ctx.strokeStyle = on ? 'rgba(34,211,238,.6)' : '#475569'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1;
+  rr(x + w * 0.18, y + l * 0.1, w * 0.64, l * 0.12, 6); ctx.fillStyle = 'rgba(148,163,184,.12)'; ctx.fill();
+
+  // Das Gehirn auf dem Dach
+  const bx = x + w * 0.2, by = y + l * 0.4, bw = w * 0.6, bh = l * 0.3;
+  rr(bx, by, bw, bh, 6); ctx.fillStyle = '#0b1324'; ctx.fill();
+  ctx.strokeStyle = on ? 'rgba(34,211,238,.5)' : '#334155'; ctx.stroke();
+  if (state.cartridge) { rr(bx + bw * 0.2, by - 6, bw * 0.6, 9, 2); ctx.fillStyle = CARTRIDGES[state.cartridge].color; ctx.fill(); }
+  const ledC = !on ? '#334155' : sim.alarm ? (blinkOn ? '#ef4444' : '#450a0a') : state.program ? '#22d3ee' : '#22c55e';
+  ctx.save();
+  ctx.shadowColor = ledC; ctx.shadowBlur = on ? 10 : 0;
+  ctx.beginPath(); ctx.arc(bx + bw / 2, by + bh / 2, 4, 0, Math.PI * 2); ctx.fillStyle = ledC; ctx.fill();
+  ctx.restore();
+
+  // Ultraschallsensor vorne
+  if (has('sonar')) {
+    rr(x + w * 0.27, y - 6, w * 0.46, 10, 3); ctx.fillStyle = on ? '#5b4a9c' : '#3f3f5a'; ctx.fill();
+    ctx.fillStyle = '#c4b5fd';
+    [x + w * 0.39, x + w * 0.61].forEach(ex => { ctx.beginPath(); ctx.arc(ex, y - 1, 3, 0, Math.PI * 2); ctx.fill(); });
+  }
+  // Scheinwerfer
+  if (has('led')) {
+    [x + w * 0.2, x + w * 0.8].forEach(lx => {
+      ctx.beginPath(); ctx.arc(lx, y + 4, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = lit ? '#fde047' : '#713f12'; ctx.fill();
+    });
+  }
+
+  // Port-Beschriftungen am Fahrzeug
+  ctx.font = '600 10px "JetBrains Mono", monospace'; ctx.textBaseline = 'middle';
+  const label = (txt, lx, ly, align, color) => { if (!txt) return; ctx.textAlign = align; ctx.fillStyle = color; ctx.fillText(txt, lx, ly); };
+  label(portsWith('motorL').join(','), lxW - ww / 2 - 4, rearY, 'right', COMPONENTS.motorL.color);
+  label(portsWith('motorR').join(','), rxW + ww / 2 + 4, rearY, 'left', COMPONENTS.motorR.color);
+  label(portsWith('servo').join(','), lxW - ww / 2 - 4, frontY, 'right', COMPONENTS.servo.color);
+  label(portsWith('sonar').join(','), x + w * 0.73 + 5, y - 1, 'left', COMPONENTS.sonar.color);
+  label(portsWith('led').join(','), rxW + ww / 2 + 4, frontY, 'left', COMPONENTS.led.color);
+}
+
+// Hindernis direkt im Bild verschieben
+function canvasY(e) { return e.clientY - cv.getBoundingClientRect().top; }
+function setDistanceFromY(y) {
+  const g = geom();
+  state.distance = clamp((g.carTop - (y + 10)) / g.ppc, MIN_D, MAX_D);
+  state.obstacleShift = 0;
+}
+cv.addEventListener('pointerdown', (e) => {
+  const y = canvasY(e);
+  if (y > geom().carTop - 4) return;
+  dragObstacle = true; state.draggingDistance = true;
+  cv.setPointerCapture(e.pointerId);
+  setDistanceFromY(y);
+});
+cv.addEventListener('pointermove', (e) => {
+  if (!dragObstacle) { cv.style.cursor = canvasY(e) < geom().carTop - 4 ? 'ns-resize' : 'default'; return; }
+  setDistanceFromY(canvasY(e));
+});
+const endObstacleDrag = () => {
+  if (!dragObstacle) return;
+  dragObstacle = false; state.draggingDistance = false;
+  logDistanceChange();
+};
+cv.addEventListener('pointerup', endObstacleDrag);
+cv.addEventListener('pointercancel', endObstacleDrag);
+
+function logDistanceChange() {
+  const d = Math.round(state.distance);
+  const txt = d >= MAX_D ? 'über 200 cm (außer Reichweite)' : `${d} cm`;
+  if (!state.power) { log('info', `Hindernis auf ${txt} gestellt. Das Gehirn ist aus und misst gerade nichts.`); return; }
+  const sp = portsWith('sonar');
+  if (!sp.length) { log('warn', `Hindernis auf ${txt} gestellt – aber es ist kein Ultraschallsensor angesteckt. Das Gehirn kann es nicht „sehen“.`); return; }
+  log('info', `Abstands-Test: Der Ultraschallsensor an Port ${joinList(sp)} misst jetzt ${txt}.`);
+}
+
+/* =========================================================
+   11) LIVE-WERTE (Dashboard je Port)
+   ========================================================= */
+let valEls = {}, barEls = {}, needleEls = {}, ledTestBtns = [], distEls = [], distOuts = [];
+
+function valueCard(p) {
+  const type = state.ports[p], c = COMPONENTS[type];
+  const head = `<div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background:${c.color}"></span><span class="mono text-[11px] tracking-widest text-slate-400">PORT ${p}</span></div>
+      <span class="text-xs font-semibold truncate" style="color:${type === 'empty' ? '#64748b' : c.color}">${c.short}</span>
+    </div>`;
+  let body = '';
+  switch (type) {
+    case 'empty':
+      body = `<p class="text-xs text-slate-500 mt-2">Nichts angesteckt. Wähle beim Gehirn ein Bauteil für Port ${p}.</p>`;
+      break;
+    case 'motorL': case 'motorR':
+      body = `<div class="mt-2 flex items-baseline gap-2"><span class="mono text-3xl font-semibold tabular-nums" data-val="${p}-rpm">0</span><span class="text-xs text-slate-400">U/min (RPM)</span></div>
+        <div class="mt-2 h-2 rounded-full bg-slate-800 overflow-hidden relative">
+          <div class="absolute inset-y-0 left-1/2 w-px bg-slate-600"></div>
+          <div data-bar="${p}" class="absolute inset-y-0 rounded-full" style="background:${c.color};left:50%;width:0"></div>
+        </div>
+        <div class="mt-1.5 text-xs text-slate-400">Richtung: <span class="text-slate-200" data-val="${p}-dir">Stopp</span></div>`;
+      break;
+    case 'sonar':
+      body = `<div class="mt-2 flex items-baseline gap-2"><span class="mono text-3xl font-semibold tabular-nums" data-val="${p}-dist">—</span><span class="text-xs text-slate-400">cm Abstand</span></div>
+        <div class="text-xs mt-1" data-val="${p}-dstat">—</div>
+        <label class="block mt-2"><span class="text-[11px] text-slate-400">Testen: Hindernis verschieben</span>
+          <input type="range" min="2" max="200" step="1" value="200" data-dist aria-label="Abstand für Ultraschallsensor an Port ${p}" class="mt-1" />
+        </label>`;
+      break;
+    case 'servo':
+      body = `<div class="mt-2 flex items-center gap-4">
+          <svg viewBox="0 0 60 36" width="72" height="44" aria-hidden="true">
+            <path d="M6 32a24 24 0 0 1 48 0" fill="none" stroke="#334155" stroke-width="3" stroke-linecap="round"/>
+            <line data-needle="${p}" x1="30" y1="32" x2="30" y2="10" stroke="${c.color}" stroke-width="3" stroke-linecap="round" />
+            <circle cx="30" cy="32" r="3" fill="${c.color}"/>
+          </svg>
+          <div><div class="mono text-3xl font-semibold tabular-nums" data-val="${p}-ang">0°</div><div class="text-xs text-slate-400" data-val="${p}-adir">geradeaus</div></div>
+        </div>`;
+      break;
+    case 'led':
+      body = `<div class="mt-2 flex items-center justify-between gap-3">
+          <div class="flex items-baseline gap-2"><span class="mono text-2xl font-semibold" data-val="${p}-led">Aus</span></div>
+          <button type="button" class="btn text-xs" data-ledtest>Licht testen</button>
+        </div>
+        <p class="text-[11px] text-slate-500 mt-1.5">Der Test geht nur, wenn kein Programm läuft.</p>`;
+      break;
+  }
+  return `<div class="vcard" data-card="${p}" style="--pc:${c.color}">${head}${body}</div>`;
+}
+
+function renderValues() {
+  const wrap = $('#values');
+  wrap.innerHTML = PORT_IDS.map(valueCard).join('');
+  valEls = {}; barEls = {}; needleEls = {};
+  wrap.querySelectorAll('[data-val]').forEach(el => { valEls[el.dataset.val] = el; });
+  wrap.querySelectorAll('[data-bar]').forEach(el => { barEls[el.dataset.bar] = el; });
+  wrap.querySelectorAll('[data-needle]').forEach(el => { needleEls[el.dataset.needle] = el; });
+  ledTestBtns = [...wrap.querySelectorAll('[data-ledtest]')];
+  refreshDistEls();
+}
+
+function refreshDistEls() {
+  distEls = [...document.querySelectorAll('input[data-dist]')];
+  distOuts = [...document.querySelectorAll('[data-dist-out]')];
+}
+
+function setVal(key, text, color) {
+  const el = valEls[key];
+  if (!el) return;
+  if (el.textContent !== text) el.textContent = text;
+  if (color !== undefined && el.style.color !== color) el.style.color = color;
+}
+
+function updateDashboard() {
+  const on = state.power;
+  PORT_IDS.forEach(p => {
+    const type = state.ports[p];
+    if (type === 'motorL' || type === 'motorR') {
+      const rpm = type === 'motorL' ? sim.rpmL : sim.rpmR;
+      setVal(`${p}-rpm`, on ? String(Math.round(Math.abs(rpm))) : '—');
+      setVal(`${p}-dir`, !on ? 'Aus' : Math.abs(rpm) < 3 ? 'Stopp' : rpm > 0 ? 'Vorwärts ▲' : 'Rückwärts ▼');
+      const bar = barEls[p];
+      if (bar) {
+        const f = Math.min(1, Math.abs(rpm) / MAX_RPM) * 50;
+        bar.style.left = (rpm >= 0 ? 50 : 50 - f) + '%';
+        bar.style.width = f + '%';
+      }
+    } else if (type === 'sonar') {
+      const d = state.distance;
+      setVal(`${p}-dist`, !on ? '—' : d >= MAX_D ? '>200' : String(Math.round(d)));
+      if (!on) setVal(`${p}-dstat`, 'Gehirn ist aus', '#64748b');
+      else if (d < 20) setVal(`${p}-dstat`, 'Sehr nah! (unter 20 cm)', '#f87171');
+      else if (d < 50) setVal(`${p}-dstat`, 'Nah', '#fbbf24');
+      else if (d < MAX_D) setVal(`${p}-dstat`, 'Hindernis erkannt', '#67e8f9');
+      else setVal(`${p}-dstat`, 'Nichts in Reichweite', '#94a3b8');
+    } else if (type === 'servo') {
+      const a = Math.round(sim.servo);
+      setVal(`${p}-ang`, on ? `${a}°` : '—');
+      setVal(`${p}-adir`, !on ? 'Aus' : a < -2 ? 'links' : a > 2 ? 'rechts' : 'geradeaus');
+      const n = needleEls[p];
+      if (n) n.setAttribute('transform', `rotate(${(sim.servo / MAX_STEER) * 60} 30 32)`);
+    } else if (type === 'led') {
+      setVal(`${p}-led`, !on ? 'Aus' : sim.led === 'on' ? 'An' : sim.led === 'blink' ? 'Blinkt' : 'Aus',
+        on && sim.led !== 'off' ? '#facc15' : '#e2e8f0');
+    }
+  });
+  ledTestBtns.forEach(b => {
+    b.disabled = !on || !!state.program || state.loading;
+    const txt = state.ledTest ? 'Test beenden' : 'Licht testen';
+    if (b.textContent !== txt) b.textContent = txt;
+  });
+
+  // Abstands-Regler synchron halten
+  const dv = Math.round(state.distance);
+  distEls.forEach(el => {
+    if (state.draggingDistance && document.activeElement === el) return;
+    if (+el.value !== dv) el.value = dv;
+  });
+  const dTxt = state.distance >= MAX_D ? '>200 cm' : `${dv} cm`;
+  distOuts.forEach(o => { if (o.textContent !== dTxt) o.textContent = dTxt; });
+  const sp = String(Math.round(Math.abs(sim.speed)));
+  const spEl = $('#speedOut');
+  if (spEl.textContent !== sp) spEl.textContent = sp;
+}
+
+/* =========================================================
+   12) LEDs, GEHIRN-STATUS & GAMEPAD-SPERRE
+   ========================================================= */
+function setLed(el, color, mode) {
+  const key = color + '|' + mode;
+  if (el._ledKey === key) return;
+  el._ledKey = key;
+  el.style.setProperty('--c', color);
+  el.classList.remove('is-on', 'pulse', 'blink', 'blink-fast');
+  if (mode) {
+    el.classList.add('is-on');
+    if (mode !== 'on') el.classList.add(mode);
+  }
+}
+
+const ledPwr = $('#ledPwr'), ledRun = $('#ledRun'), ledAlm = $('#ledAlm'), brainEl = $('#brain');
+
+function updateLeds() {
+  setLed(ledPwr, state.power ? '#22c55e' : '#334155', state.power ? 'on' : '');
+  const runMode = !state.power ? '' : (state.loading || state.booting) ? 'blink-fast' : state.program ? 'pulse' : '';
+  setLed(ledRun, runMode ? '#22d3ee' : '#334155', runMode);
+  setLed(ledAlm, sim.alarm ? '#ef4444' : '#334155', sim.alarm ? 'blink' : '');
+  brainEl.classList.toggle('is-alarm', sim.alarm);
+}
+
+function renderBrain() {
+  brainEl.classList.toggle('is-on', state.power);
+  const pb = $('#powerBtn');
+  pb.classList.toggle('is-on', state.power);
+  pb.setAttribute('aria-pressed', String(state.power));
+  $('#brainState').textContent = !state.power ? 'Aus'
+    : state.booting ? 'Startet …'
+    : state.loading ? 'Lädt Programm …'
+    : state.program ? 'Programm läuft'
+    : 'Bereit';
+  const bt = {
+    off:          ['#334155', '',           'Aus'],
+    searching:    ['#3b82f6', 'blink-fast', 'Suche …'],
+    connected:    ['#22d3ee', 'pulse',      'Verbunden'],
+    disconnected: ['#ef4444', 'on',         'Getrennt']
+  }[state.bt];
+  setLed($('#ledBt'), bt[0], bt[1]);
+  $('#btText').textContent = bt[2];
+  updatePorts();
+  updateGamepadLock();
+}
+
+function updateGamepadLock() {
+  let msg = '';
+  if (!state.power) msg = 'Das Gehirn ist aus.';
+  else if (state.program !== 'rc') msg = 'Stecke die rote Cartridge „RC-Sportwagen“ ein, um selbst zu fahren.';
+  else if (state.bt !== 'connected') msg = 'Bluetooth getrennt – tippe beim Gehirn auf die Bluetooth-Anzeige.';
+  $('#padLock').hidden = !msg;
+  $('#padLockText').textContent = msg;
+  if (msg) clearInputs();
+}
+
+function renderAll() {
+  renderBrain();
+  renderSlot();
+  renderShelf();
+  renderValues();
+}
+
+/* =========================================================
+   13) GAMEPAD & TASTATUR
+   ========================================================= */
+function setInput(dir, pressed) {
+  input[dir] = pressed;
+  const btn = $(`.pad-btn[data-dir="${dir}"]`);
+  if (btn) btn.classList.toggle('is-pressed', pressed);
+}
+function clearInputs() { Object.keys(input).forEach(d => setInput(d, false)); }
+
+document.querySelectorAll('.pad-btn[data-dir]').forEach(btn => {
+  const dir = btn.dataset.dir;
+  btn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    btn.setPointerCapture(e.pointerId);
+    setInput(dir, true);
+  });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => btn.addEventListener(ev, () => setInput(dir, false)));
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
+});
+
+$('#btnLight').addEventListener('click', () => {
+  if (state.program !== 'rc') return;
+  state.lightManual = !state.lightManual;
+  $('#btnLight').setAttribute('aria-pressed', String(state.lightManual));
+  if (!has('led')) log('warn', 'Licht-Taste gedrückt, aber es ist kein LED-Lichtmodul angesteckt.');
+  else log('action', `Gamepad: Licht ${state.lightManual ? 'an' : 'aus'} → LED-Lichtmodul an Port ${joinList(portsWith('led'))} ${state.lightManual ? 'leuchtet' : 'ist aus'}.`);
+});
+
+const KEYMAP = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
+function keyAllowed(e) {
+  const tag = (e.target && e.target.tagName) || '';
+  return state.tab === 'sim' && state.program === 'rc' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(tag);
+}
+window.addEventListener('keydown', (e) => {
+  const dir = KEYMAP[e.code];
+  if (!dir || !keyAllowed(e)) return;
+  e.preventDefault();
+  setInput(dir, true);
+});
+window.addEventListener('keyup', (e) => {
+  const dir = KEYMAP[e.code];
+  if (dir) setInput(dir, false);
+});
+window.addEventListener('blur', clearInputs);
+
+/* =========================================================
+   14) SANDBOX: NO-CODE-REGELN
+   ========================================================= */
+const validValue = (v) => Number.isFinite(v) && v >= 1 && v <= 200;
+
+function ruleSentence(r) {
+  if (!validValue(r.value)) return 'Bitte gib einen Abstand zwischen 1 und 200 cm ein.';
+  let s = `Wenn der Ultraschallsensor ${OPS[r.op]} ${r.value} cm misst, dann ${ACTION_PHRASES[r.target][r.action]}.`;
+  if (r.elseAction !== 'none') s += ` Sonst ${ACTION_PHRASES[r.target][r.elseAction]}.`;
+  return s;
+}
+
+function sanitizeRule(r) {
+  r = r || {};
+  const target = TARGETS[r.target] ? r.target : 'motors';
+  const actions = TARGETS[target].actions;
+  const value = Math.round(Number(r.value));
+  return {
+    sensor: 'sonar',
+    op: OPS[r.op] ? r.op : 'lt',
+    value: validValue(value) ? value : 30,
+    target,
+    action: actions[r.action] ? r.action : Object.keys(actions)[0],
+    elseAction: actions[r.elseAction] ? r.elseAction : 'none'
+  };
+}
+
+function options(obj, selected) {
+  return Object.entries(obj).map(([k, v]) => `<option value="${k}"${k === selected ? ' selected' : ''}>${esc(v)}</option>`).join('');
+}
+
+function ruleHTML(r, i) {
+  const actions = TARGETS[r.target].actions;
+  const targetLabels = Object.fromEntries(Object.entries(TARGETS).map(([k, v]) => [k, v.label]));
+  return `<div class="rule" data-rule="${i}">
+    <div class="flex items-center justify-between mb-2">
+      <span class="mono text-[11px] tracking-widest text-slate-400">REGEL ${i + 1}</span>
+      <button type="button" class="text-xs text-slate-400 hover:text-red-300" data-del="${i}" aria-label="Regel ${i + 1} entfernen">Entfernen ✕</button>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="kw kw-if">WENN</span>
+      <select class="sel" data-f="sensor" aria-label="Sensor">${options(SENSORS, r.sensor)}</select>
+      <select class="sel" data-f="op" aria-label="Vergleich">${options(OPS, r.op)}</select>
+      <span class="inline-flex items-center gap-1">
+        <input type="number" class="sel w-20 ${validValue(r.value) ? '' : 'is-invalid'}" data-f="value" min="1" max="200" step="1" value="${Number.isFinite(r.value) ? r.value : ''}" inputmode="numeric" aria-label="Abstand in cm" />
+        <span class="text-sm text-slate-400">cm</span>
+      </span>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 mt-2">
+      <span class="kw kw-then">DANN</span>
+      <select class="sel" data-f="target" aria-label="Ziel">${options(targetLabels, r.target)}</select>
+      <select class="sel" data-f="action" aria-label="Aktion">${options(actions, r.action)}</select>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 mt-2">
+      <span class="kw kw-else">SONST</span>
+      <select class="sel" data-f="elseAction" aria-label="Aktion, wenn die Bedingung nicht erfüllt ist">${options({ none: 'Nichts tun', ...actions }, r.elseAction)}</select>
+      <span class="text-xs text-slate-500">(gilt für: ${TARGETS[r.target].label})</span>
+    </div>
+    <p class="mt-3 text-sm text-slate-300 border-t border-dashed border-slate-700/60 pt-2" data-sentence>${esc(ruleSentence(r))}</p>
+  </div>`;
+}
+
+function renderRules() {
+  const rules = state.draft.rules;
+  $('#rules').innerHTML = rules.length
+    ? rules.map(ruleHTML).join('')
+    : '<p class="text-sm text-slate-500">Noch keine Regel. Klicke auf „+ Regel hinzufügen“.</p>';
+  $('#btnAddRule').disabled = rules.length >= MAX_RULES;
+  $('#sbLive').innerHTML = rules.map((r, i) => `<li class="live-item" data-live="${i}"><span class="dot"></span><span>Regel ${i + 1}: ${OPS[r.op]} ${validValue(r.value) ? r.value : '?'} cm → ${TARGETS[r.target].label}: ${TARGETS[r.target].actions[r.action]}</span></li>`).join('');
+  renderSbCart();
+}
+
+function updateLiveList() {
+  const res = evaluateRules(state.draft.rules, state.distance, true);
+  document.querySelectorAll('#sbLive [data-live]').forEach(li => li.classList.toggle('is-hit', res.active.includes(+li.dataset.live)));
+  const txt = describeActions(res.actions);
+  const el = $('#sbResult');
+  if (el.textContent !== txt) el.textContent = txt;
+}
+
+function isDirty() {
+  if (!state.custom) return true;
+  return JSON.stringify({ n: $('#cartName').value.trim(), r: state.draft.rules }) !== JSON.stringify({ n: state.custom.name, r: state.custom.rules });
+}
+
+function renderSbCart() {
+  $('#sbCart').innerHTML = cartHTML('custom');
+  $('#sbStatus').textContent = state.custom
+    ? `Gespeichert: „${state.custom.name}“ · ${plural(state.custom.rules.length, 'Regel', 'Regeln')}`
+    : 'Leer – noch kein Programm gespeichert.';
+  $('#sbDirty').hidden = !(state.custom && isDirty());
+  $('#btnSave').disabled = state.saving;
+  $('#btnTest').disabled = !state.custom || state.saving;
+}
+
+function showSbError(msg) {
+  const el = $('#sbError');
+  el.textContent = msg || '';
+  el.hidden = !msg;
+}
+
+function saveToCartridge() {
+  if (state.saving) return;
+  const name = $('#cartName').value.trim();
+  const rules = state.draft.rules;
+  if (!name) { showSbError('Bitte gib deiner Cartridge einen Namen.'); return; }
+  if (!rules.length) { showSbError('Füge mindestens eine Regel hinzu.'); return; }
+  const bad = rules.findIndex(r => !validValue(r.value));
+  if (bad >= 0) { showSbError(`Regel ${bad + 1}: Der Abstand muss zwischen 1 und 200 cm liegen.`); return; }
+  showSbError('');
+
+  state.saving = true;
+  $('#sbWrite').hidden = false;
+  restartAnim($('#sbBar'), 'run');
+  renderSbCart();
+  setTimeout(() => {
+    state.saving = false;
+    $('#sbWrite').hidden = true;
+    state.custom = { name, rules: rules.map(r => ({ ...r })) };
+    state.draft.name = name;
+    try { localStorage.setItem(LS_KEY, JSON.stringify(state.custom)); } catch (e) { /* Speicher nicht verfügbar – Cartridge gilt nur für diese Sitzung */ }
+    log('cart', `Programm „${name}“ auf die leere Cartridge geschrieben (${plural(rules.length, 'Regel', 'Regeln')}).`);
+    renderShelf(); renderSlot(true); renderSbCart();
+    if (state.cartridge === 'custom' && state.power && !state.booting) {
+      log('info', 'Die Cartridge steckt gerade im Gehirn – das neue Programm wird neu geladen.');
+      loadProgram('custom');
+    }
+  }, 1100);
+}
+
+function testCustom() {
+  if (!state.custom) return;
+  setTab('sim');
+  if (state.cartridge === 'custom') {
+    if (state.power && !state.booting && !state.loading) loadProgram('custom');
+  } else {
+    insertCartridge('custom');
+  }
+}
+
+// Regel-Editor: Änderungen übernehmen
+function onRuleEdit(e) {
+  const f = e.target.dataset.f;
+  const row = e.target.closest('[data-rule]');
+  if (!f || !row) return;
+  if (e.type === 'input' && f !== 'value') return; // Selects nur per „change“
+  const r = state.draft.rules[+row.dataset.rule];
+  if (f === 'value') {
+    r.value = e.target.value === '' ? NaN : Math.round(Number(e.target.value));
+    e.target.classList.toggle('is-invalid', !validValue(r.value));
+  } else {
+    r[f] = e.target.value;
+  }
+  if (f === 'target') {
+    r.action = Object.keys(TARGETS[r.target].actions)[0];
+    r.elseAction = 'none';
+    renderRules();
+    return;
+  }
+  row.querySelector('[data-sentence]').textContent = ruleSentence(r);
+  const li = $(`#sbLive [data-live="${row.dataset.rule}"] span:last-child`);
+  if (li) li.textContent = `Regel ${+row.dataset.rule + 1}: ${OPS[r.op]} ${validValue(r.value) ? r.value : '?'} cm → ${TARGETS[r.target].label}: ${TARGETS[r.target].actions[r.action]}`;
+  renderSbCart();
+}
+
+/* =========================================================
+   15) TABS
+   ========================================================= */
+function setTab(t) {
+  state.tab = t;
+  ['sim', 'sandbox'].forEach(id => {
+    const on = id === t;
+    $('#tab-' + id).setAttribute('aria-selected', String(on));
+    $('#tab-' + id).tabIndex = on ? 0 : -1;
+    $('#view-' + id).hidden = !on;
+  });
+  if (t !== 'sim') clearInputs();
+  if (t === 'sim') resizeCanvas();
+}
+
+/* =========================================================
+   16) EVENTS VERDRAHTEN
+   ========================================================= */
+function wireEvents() {
+  $('#powerBtn').addEventListener('click', () => (state.power ? powerOff() : powerOn()));
+  $('#btBtn').addEventListener('click', toggleBt);
+  $('#btnPreset').addEventListener('click', plugPreset);
+  $('#btnUnplug').addEventListener('click', () => PORT_IDS.forEach(p => setPort(p, 'empty')));
+  $('#btnEject').addEventListener('click', () => ejectCartridge(false));
+  $('#btnClearLog').addEventListener('click', () => { consoleEl.innerHTML = ''; });
+
+  // Regal: Klick = einstecken / auswerfen, Drag & Drop in den Slot
+  const shelf = $('#shelf');
+  const toggleCart = (id) => (state.cartridge === id ? ejectCartridge(false) : insertCartridge(id));
+  shelf.addEventListener('click', (e) => {
+    const item = e.target.closest('[data-cart]');
+    if (item) toggleCart(item.dataset.cart);
+  });
+  shelf.addEventListener('keydown', (e) => {
+    const item = e.target.closest('[data-cart]');
+    if (item && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleCart(item.dataset.cart); }
+  });
+  shelf.addEventListener('dragstart', (e) => {
+    const item = e.target.closest('[data-cart]');
+    if (!item) return;
+    e.dataTransfer.setData('text/plain', item.dataset.cart);
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  const slot = $('#slot'), mouth = $('#slotMouth');
+  const slotTargets = [slot, mouth];
+  slotTargets.forEach(el => {
+    el.addEventListener('dragenter', (e) => { e.preventDefault(); mouth.classList.add('is-target'); });
+    el.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; mouth.classList.add('is-target'); });
+    el.addEventListener('dragleave', () => mouth.classList.remove('is-target'));
+    el.addEventListener('drop', (e) => {
+      e.preventDefault();
+      mouth.classList.remove('is-target');
+      const id = e.dataTransfer.getData('text/plain');
+      if (CARTRIDGES[id]) insertCartridge(id);
+    });
+  });
+  document.addEventListener('dragend', () => mouth.classList.remove('is-target'));
+  const slotActivate = () => {
+    if (state.cartridge) ejectCartridge(false);
+    else { log('info', 'Der Slot ist leer. Tippe im Cartridge-Regal auf eine Cartridge oder zieh sie hierher.'); restartAnim(mouth, 'shake'); }
+  };
+  slot.addEventListener('click', slotActivate);
+  slot.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); slotActivate(); } });
+
+  // LED-Test im Dashboard
+  $('#values').addEventListener('click', (e) => {
+    if (!e.target.closest('[data-ledtest]') || !state.power || state.program) return;
+    state.ledTest = !state.ledTest;
+    log('action', state.ledTest
+      ? `LED-Test: Das Lichtmodul an Port ${joinList(portsWith('led'))} leuchtet. Funktioniert!`
+      : 'LED-Test beendet – Licht aus.');
+  });
+
+  // Abstands-Regler (alle synchron)
+  document.addEventListener('input', (e) => {
+    if (!e.target.matches('input[data-dist]')) return;
+    state.distance = clamp(+e.target.value, MIN_D, MAX_D);
+    state.obstacleShift = 0;
+    state.draggingDistance = true;
+  });
+  document.addEventListener('change', (e) => {
+    if (!e.target.matches('input[data-dist]')) return;
+    state.draggingDistance = false;
+    logDistanceChange();
+  });
+  window.addEventListener('pointerup', () => { if (!dragObstacle) state.draggingDistance = false; });
+
+  // Tabs (inkl. Pfeiltasten-Navigation)
+  $('#tab-sim').addEventListener('click', () => setTab('sim'));
+  $('#tab-sandbox').addEventListener('click', () => setTab('sandbox'));
+  $('[role="tablist"]').addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const next = state.tab === 'sim' ? 'sandbox' : 'sim';
+    setTab(next); $('#tab-' + next).focus();
+  });
+
+  // Sandbox
+  $('#rules').addEventListener('input', onRuleEdit);
+  $('#rules').addEventListener('change', onRuleEdit);
+  $('#rules').addEventListener('click', (e) => {
+    const del = e.target.closest('[data-del]');
+    if (!del) return;
+    state.draft.rules.splice(+del.dataset.del, 1);
+    renderRules();
+  });
+  $('#btnAddRule').addEventListener('click', () => {
+    if (state.draft.rules.length >= MAX_RULES) return;
+    state.draft.rules.push(sanitizeRule({ op: 'lt', value: 30, target: 'motors', action: 'stop', elseAction: 'none' }));
+    renderRules();
+  });
+  $('#btnExample').addEventListener('click', () => {
+    state.draft.rules = EXAMPLE_RULES.map(r => ({ ...r }));
+    showSbError('');
+    renderRules();
+  });
+  $('#cartName').addEventListener('input', renderSbCart);
+  $('#btnSave').addEventListener('click', saveToCartridge);
+  $('#btnTest').addEventListener('click', testCustom);
+
+  new ResizeObserver(resizeCanvas).observe($('#cvWrap'));
+}
+
+/* =========================================================
+   17) START
+   ========================================================= */
+function loadSavedCartridge() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj.name !== 'string' || !Array.isArray(obj.rules) || !obj.rules.length) return;
+    state.custom = { name: obj.name.trim().slice(0, 22) || 'Meine Cartridge', rules: obj.rules.slice(0, MAX_RULES).map(sanitizeRule) };
+    state.draft = { name: state.custom.name, rules: state.custom.rules.map(r => ({ ...r })) };
+  } catch (e) { /* kein Zugriff auf localStorage – mit leerer Cartridge starten */ }
+}
+
+let lastFrame = performance.now(), lastLive = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - lastFrame) / 1000);
+  lastFrame = now;
+  sim.time += dt;
+  step(dt, now);
+  if (state.tab === 'sim') draw();
+  updateDashboard();
+  updateLeds();
+  if (state.tab === 'sandbox' && now - lastLive > 100) { lastLive = now; updateLiveList(); }
+  requestAnimationFrame(frame);
+}
+
+function init() {
+  loadSavedCartridge();
+  // Standard-Auto ist beim Start bereits zusammengesteckt
+  Object.assign(state.ports, { A: 'sonar', B: 'motorL', C: 'motorR', D: 'servo' });
+  buildPorts();
+  wireEvents();
+  $('#cartName').value = state.draft.name;
+  renderRules();
+  renderAll();
+  resizeCanvas();
+  log('info', 'Willkommen bei Santronic! Das hier ist das Gehirn deines Baukastens.');
+  log('info', 'Am Gehirn stecken schon vier Bauteile (Standard-Auto): A = Ultraschall, B/C = Motoren, D = Lenkung. Du kannst sie über die Auswahlfelder tauschen.');
+  log('info', 'Schritt 1: Drück den runden Power-Knopf am Gehirn.');
+  requestAnimationFrame(frame);
+}
+
+init();
+})();
+</script>
+</body>
+</html>
