@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0b1120" />
 <title>Santronic Gehirn-Simulator</title>
-<meta name="description" content="Interaktiver Simulator der Santronic-Steuereinheit: Plug-&-Play-Ports, Programm-Cartridges, Live-Vorschau und No-Code-Regeln." />
+<meta name="description" content="Interaktiver Simulator der Santronic-Steuereinheit: Plug-&-Play-Ports, farbige Programm-Cartridges für Autos, Schiffe, Fluggeräte und Roboter, Live-Vorschau und No-Code-Regeln." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -17,7 +17,7 @@
       theme: {
         extend: {
           colors: {
-            bp: { bg: '#0b1120', panel: '#111a2e', edge: '#22304d', ink: '#f8fafc', muted: '#94a3b8', live: '#22d3ee', cart: '#ef4444' }
+            bp: { bg: '#0b1120', panel: '#111a2e', edge: '#22304d', ink: '#f8fafc', muted: '#94a3b8' }
           },
           fontFamily: {
             sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -30,47 +30,58 @@
 </script>
 <style>
   /* =========================================================
-     Basis & Blueprint-Look
+     Farbthema: Die eingesteckte Cartridge färbt das ganze Interface.
+     --acc / --acc-soft sind registriert, damit der Farbwechsel weich überblendet.
      ========================================================= */
+  @property --acc { syntax: '<color>'; inherits: true; initial-value: #22d3ee; }
+  @property --acc-soft { syntax: '<color>'; inherits: true; initial-value: #a5f3fc; }
   :root {
-    --bg: #0b1120; --panel: #111a2e; --edge: #22304d; --ink: #f8fafc;
-    --muted: #94a3b8; --live: #22d3ee; --cart: #ef4444;
+    --bg: #0b1120; --panel: #111a2e; --edge: #22304d; --ink: #f8fafc; --muted: #94a3b8;
+    --acc: #22d3ee; --acc-soft: #a5f3fc;   /* Standard ohne Cartridge: Cyan */
     color-scheme: dark;
+    transition: --acc .7s ease, --acc-soft .7s ease;
   }
+  :root[data-cart="auto"]    { --acc: #ef4444; --acc-soft: #fecaca; }
+  :root[data-cart="schiff"]  { --acc: #3b82f6; --acc-soft: #bfdbfe; }
+  :root[data-cart="flug"]    { --acc: #e2e8f0; --acc-soft: #ffffff; }
+  :root[data-cart="roboter"] { --acc: #eab308; --acc-soft: #fef08a; }
+
   [hidden] { display: none !important; }
   html, body { background: var(--bg); color: var(--ink); }
   body { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-tap-highlight-color: transparent; margin: 0; }
   .blueprint {
     background-image:
-      linear-gradient(rgba(34,211,238,.045) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(34,211,238,.045) 1px, transparent 1px),
-      linear-gradient(rgba(34,211,238,.022) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(34,211,238,.022) 1px, transparent 1px);
+      linear-gradient(color-mix(in srgb, var(--acc) 5%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--acc) 5%, transparent) 1px, transparent 1px),
+      linear-gradient(color-mix(in srgb, var(--acc) 2.5%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--acc) 2.5%, transparent) 1px, transparent 1px);
     background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
   }
   .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
-  .panel { background: rgba(17,26,46,.9); border: 1px solid var(--edge); border-radius: 18px; }
+  .t-acc { color: var(--acc-soft); }
+  .hover-acc:hover { color: var(--acc-soft); }
+  .panel { background: rgba(17,26,46,.9); border: 1px solid var(--edge); border-radius: 18px; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--acc) 14%, transparent); }
   .panel-title { font: 600 11px/1.2 "JetBrains Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0; }
+  .logo { border: 1px solid color-mix(in srgb, var(--acc) 50%, transparent); color: var(--acc-soft); box-shadow: 0 0 18px -4px var(--acc); }
 
   /* Formular-Elemente */
   .sel { background: #0b1324; border: 1px solid #2b3b5c; border-radius: 9px; padding: 7px 9px; color: var(--ink); font-size: 13px; max-width: 100%; }
   .sel.is-invalid { border-color: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,.25); }
-  .sel:focus-visible, .btn:focus-visible, .tab:focus-visible, .pad-btn:focus-visible, .socket:focus-visible,
+  .sel:focus-visible, .btn:focus-visible, .tab:focus-visible, .pad-btn:focus-visible, .socket:focus-visible, .mode-btn:focus-visible,
   .shelf-item:focus-visible, .power:focus-visible, .bt-btn:focus-visible, #slot:focus-visible, input[type=range]:focus-visible {
-    outline: 2px solid var(--live); outline-offset: 2px;
+    outline: 2px solid var(--acc); outline-offset: 2px;
   }
-  input[type=range] { accent-color: var(--live); width: 100%; }
+  input[type=range] { accent-color: var(--acc); width: 100%; }
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; border: 1px solid #2b3b5c; background: #16213a; color: var(--ink);
          border-radius: 10px; padding: .5rem .8rem; font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s, background .15s; }
-  .btn:hover:not(:disabled) { border-color: #38bdf8; }
-  .btn-live { background: rgba(34,211,238,.12); border-color: rgba(34,211,238,.5); color: #a5f3fc; }
-  .btn-red { background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.55); color: #fecaca; }
-  .btn-red:hover:not(:disabled) { border-color: #f87171; }
+  .btn:hover:not(:disabled) { border-color: var(--acc); }
+  .btn-acc { background: color-mix(in srgb, var(--acc) 12%, transparent); border-color: color-mix(in srgb, var(--acc) 50%, transparent); color: var(--acc-soft); }
+  .btn-acc-strong { background: color-mix(in srgb, var(--acc) 22%, transparent); border-color: color-mix(in srgb, var(--acc) 70%, transparent); color: #fff; }
   .btn:disabled { opacity: .4; cursor: not-allowed; }
 
   /* Tabs */
   .tab { padding: .45rem .8rem; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; background: transparent; border: 0; }
-  .tab[aria-selected="true"] { background: rgba(34,211,238,.14); color: #e0faff; box-shadow: inset 0 0 0 1px rgba(34,211,238,.45); }
+  .tab[aria-selected="true"] { background: color-mix(in srgb, var(--acc) 14%, transparent); color: #fff; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 45%, transparent); }
 
   /* =========================================================
      LEDs
@@ -89,28 +100,33 @@
      ========================================================= */
   .brain { position: relative; border-radius: 26px; border: 1.5px solid #2b3b5c; background: linear-gradient(180deg, #141f36, #0d1528);
            padding: 22px 16px 16px; transition: box-shadow .3s, border-color .3s; }
-  .brain.is-on { border-color: rgba(34,211,238,.45); box-shadow: 0 0 0 1px rgba(34,211,238,.12), 0 0 40px -12px rgba(34,211,238,.5); }
+  .brain.is-on { border-color: color-mix(in srgb, var(--acc) 45%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--acc) 12%, transparent), 0 0 40px -12px var(--acc); }
   .brain.is-alarm { border-color: rgba(239,68,68,.85); box-shadow: 0 0 50px -6px rgba(239,68,68,.7); }
   .screw { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #1e293b; border: 1px solid #3b4a66; }
   .screw::after { content: ""; position: absolute; left: 1px; right: 1px; top: 3px; height: 1.5px; background: #5b6b88; transform: rotate(35deg); }
   .power { width: 66px; height: 66px; border-radius: 50%; border: 2px solid #334155; background: radial-gradient(circle at 50% 35%, #1e293b, #0b1120);
            color: #64748b; display: grid; place-items: center; transition: border-color .2s, color .2s, box-shadow .2s; cursor: pointer; flex: none; }
   .power svg { width: 28px; height: 28px; }
-  .power.is-on { border-color: var(--live); color: var(--live); box-shadow: 0 0 0 4px rgba(34,211,238,.12), 0 0 28px rgba(34,211,238,.45); }
+  .power.is-on { border-color: var(--acc); color: var(--acc); box-shadow: 0 0 0 4px color-mix(in srgb, var(--acc) 12%, transparent), 0 0 28px color-mix(in srgb, var(--acc) 45%, transparent); }
   .power:active { transform: scale(.95); }
   .bt-btn { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; border: 1px solid #2b3b5c; background: #0c1426; cursor: pointer; color: var(--ink); }
-  .bt-btn:hover { border-color: #38bdf8; }
+  .bt-btn:hover { border-color: var(--acc); }
 
-  /* Ports */
-  .port { --pc: #334155; border: 1.5px solid #2b3b5c; border-radius: 14px; background: #0c1426; padding: 10px; transition: border-color .25s, box-shadow .25s; min-width: 0; }
+  /* Ports: leuchten in der Farbe der eingesteckten Cartridge */
+  .port { --pc: var(--acc); border: 1.5px solid #2b3b5c; border-radius: 14px; background: #0c1426; padding: 10px; transition: border-color .25s, box-shadow .25s; min-width: 0; }
   .port.is-active { border-color: var(--pc); box-shadow: 0 0 0 1px color-mix(in srgb, var(--pc) 35%, transparent), 0 0 22px -5px var(--pc); }
   .socket { width: 100%; height: 48px; border-radius: 10px; border: 1.5px dashed #334155; display: grid; place-items: center; color: #64748b;
             cursor: pointer; background: transparent; transition: border-color .2s, color .2s, background .2s; padding: 0 6px; }
   .socket svg { width: 22px; height: 22px; flex: none; }
   .port.is-plugged .socket { border-style: solid; color: #94a3b8; }
-  .port.is-active .socket { border-color: var(--pc); color: var(--pc); background: color-mix(in srgb, var(--pc) 12%, transparent); }
+  .port.is-active .socket { border-color: var(--pc); color: var(--acc-soft); background: color-mix(in srgb, var(--pc) 12%, transparent); }
   .snap { animation: snap .38s cubic-bezier(.3,1.6,.5,1); }
   @keyframes snap { 0% { transform: scale(.88); } 100% { transform: scale(1); } }
+
+  /* Programm-Auswahl auf der Cartridge */
+  .mode-btn { padding: .45rem .75rem; border-radius: 999px; border: 1px solid #2b3b5c; background: #0c1426; color: #cbd5e1; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: border-color .2s, background .2s; }
+  .mode-btn:hover { border-color: var(--acc); }
+  .mode-btn[aria-checked="true"] { border-color: var(--acc); color: #fff; background: color-mix(in srgb, var(--acc) 18%, transparent); box-shadow: 0 0 14px -4px var(--acc); }
 
   /* =========================================================
      Cartridges (3DS-ähnliche Kassetten)
@@ -120,7 +136,7 @@
           clip-path: polygon(0 0, 80% 0, 100% 13%, 100% 100%, 0 100%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); user-select: none; transition: transform .15s; }
   .cart-label { position: absolute; left: 11%; right: 11%; top: 15%; bottom: 27%; background: #f8fafc; border-radius: 5px; color: #0f172a;
                 padding: 5px; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; text-align: left; }
-  .cart-label .t { font-weight: 700; font-size: 10.5px; line-height: 1.15; overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto; }
+  .cart-label .t { font-weight: 700; font-size: 12px; line-height: 1.15; overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto; }
   .cart-label .b { font: 600 7.5px/1 "JetBrains Mono", monospace; letter-spacing: .08em; padding: 3px 4px; border-radius: 3px; align-self: flex-start; }
   .cart-pins { position: absolute; left: 14%; right: 14%; bottom: 6%; height: 9%; background: repeating-linear-gradient(90deg, #e0b84a 0 3px, transparent 3px 6px); border-radius: 2px; }
   .cart-grip { position: absolute; right: 4%; top: 32%; width: 4%; height: 28%; background: repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 2px, transparent 2px 4px); }
@@ -134,15 +150,15 @@
   .slot-cart { width: 84px; height: 62px; overflow: hidden; }
   .slot-cart .cart { animation: insertCart .35s ease-out; }
   @keyframes insertCart { from { transform: translateY(-36px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-  .slot-mouth { height: 14px; width: min(70%, 240px); border-radius: 7px; background: #020617; border: 1.5px solid #3b2530;
+  .slot-mouth { height: 14px; width: min(70%, 240px); border-radius: 7px; background: #020617; border: 1.5px solid #2b3b5c;
                 box-shadow: inset 0 3px 6px rgba(0,0,0,.8); margin: 0 auto -7px; position: relative; z-index: 2; transition: border-color .2s, box-shadow .2s; }
-  .slot-mouth.is-target { border-color: var(--cart); box-shadow: 0 0 0 4px rgba(239,68,68,.25), inset 0 3px 6px rgba(0,0,0,.8); }
-  .slot-mouth.is-filled { border-color: rgba(239,68,68,.6); }
+  .slot-mouth.is-target { border-color: var(--acc); box-shadow: 0 0 0 4px color-mix(in srgb, var(--acc) 25%, transparent), inset 0 3px 6px rgba(0,0,0,.8); }
+  .slot-mouth.is-filled { border-color: color-mix(in srgb, var(--acc) 60%, transparent); }
   .loadbar { height: 4px; background: #1e293b; border-radius: 99px; overflow: hidden; }
-  .loadbar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--cart), #fca5a5); }
+  .loadbar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--acc), var(--acc-soft)); }
   .loadbar.run > i { animation: load var(--dur, 1.4s) linear forwards; }
   @keyframes load { to { width: 100%; } }
-  .spinner { width: 14px; height: 14px; border: 2px solid rgba(248,113,113,.3); border-top-color: #f87171; border-radius: 50%; animation: spin .8s linear infinite; flex: none; }
+  .spinner { width: 14px; height: 14px; border: 2px solid color-mix(in srgb, var(--acc) 30%, transparent); border-top-color: var(--acc); border-radius: 50%; animation: spin .8s linear infinite; flex: none; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .shake { animation: shake .35s; }
   @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
@@ -159,13 +175,13 @@
   .pad-btn { width: 60px; height: 60px; border-radius: 14px; border: 1.5px solid #2b3b5c; background: #0f182c; color: #cbd5e1; display: grid; place-items: center;
              touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; transition: background .1s, border-color .1s, box-shadow .1s; }
   .pad-btn svg { width: 24px; height: 24px; }
-  .pad-btn.is-pressed, .pad-btn[aria-pressed="true"] { background: rgba(34,211,238,.18); border-color: var(--live); color: #fff; box-shadow: 0 0 16px -2px rgba(34,211,238,.6); }
-  #btnLight[aria-pressed="true"] { background: rgba(250,204,21,.16); border-color: #facc15; box-shadow: 0 0 16px -2px rgba(250,204,21,.6); }
+  .pad-btn.is-pressed { background: color-mix(in srgb, var(--acc) 18%, transparent); border-color: var(--acc); color: #fff; box-shadow: 0 0 16px -2px var(--acc); }
+  #btnLight[aria-pressed="true"] { background: rgba(250,204,21,.16); border-color: #facc15; color: #fff; box-shadow: 0 0 16px -2px rgba(250,204,21,.6); }
 
   /* Sandbox */
   .rule { border: 1px solid var(--edge); border-radius: 14px; background: #0c1426; padding: 14px; }
   .kw { display: inline-flex; align-items: center; font: 700 11px/1 "JetBrains Mono", monospace; letter-spacing: .08em; padding: 7px 9px; border-radius: 8px; min-width: 62px; justify-content: center; }
-  .kw-if { background: rgba(34,211,238,.14); color: #67e8f9; }
+  .kw-if { background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc-soft); }
   .kw-then { background: rgba(167,139,250,.16); color: #c4b5fd; }
   .kw-else { background: rgba(148,163,184,.14); color: #cbd5e1; }
   .live-item { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: #94a3b8; padding: 6px 0; }
@@ -188,7 +204,7 @@
 <header class="sticky top-0 z-30 border-b border-bp-edge bg-[#0b1120]/90 backdrop-blur">
   <div class="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-lg border border-cyan-400/50 grid place-items-center text-cyan-300 shadow-[0_0_18px_-4px_rgba(34,211,238,.6)]">
+      <div class="logo w-9 h-9 rounded-lg grid place-items-center">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
           <rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/><path d="M10 12h4M12 10v4"/>
         </svg>
@@ -221,8 +237,9 @@
         </div>
         <div id="shelf" class="grid grid-cols-4 lg:grid-cols-2 gap-2"></div>
         <p class="mt-3 text-xs text-slate-400 leading-relaxed">
-          Jede Cartridge enthält ein fertiges Programm. Einfach in den <b class="text-red-300">Easy-Play Slot</b> oben am Gehirn stecken – fertig.
-          Nochmal antippen wirft sie wieder aus.
+          Jede Farbe steht für eine Fahrzeug-Art: <b class="text-red-300">Rot</b> = Autos, <b class="text-blue-300">Blau</b> = Schiffe,
+          <b class="text-white">Weiß</b> = alles, was fliegt, <b class="text-yellow-300">Gelb</b> = Roboter.
+          Steck eine in den <b class="t-acc">Easy-Play Slot</b> – das ganze Gehirn nimmt ihre Farbe an.
         </p>
       </aside>
 
@@ -240,22 +257,28 @@
         <div class="relative mt-2">
           <div id="slot" class="slot-wrap" tabindex="0" role="button" aria-label="Easy-Play Slot: Cartridge hier hineinziehen. Antippen wirft eine steckende Cartridge aus.">
             <div id="slotEmpty" class="absolute inset-x-0 top-1 text-center text-xs text-slate-500 pointer-events-none">
-              <div class="mono tracking-[.2em] text-[10px] text-red-300/80">EASY-PLAY SLOT</div>
+              <div class="mono tracking-[.2em] text-[10px] t-acc">EASY-PLAY SLOT</div>
               Cartridge hierher ziehen oder im Regal antippen
             </div>
             <div id="slotCart" class="slot-cart" hidden></div>
           </div>
           <div id="slotMouth" class="slot-mouth"></div>
           <div id="slotLoading" class="absolute inset-x-0 top-0 h-[70px] grid place-items-center z-10" hidden>
-            <div class="bg-[#0b1120]/95 border border-red-500/40 rounded-xl px-4 py-3 w-[min(92%,300px)]">
-              <div class="flex items-center gap-2 text-[13px] font-semibold text-red-200"><span class="spinner"></span><span id="loadText">Lade Programm von Cartridge …</span></div>
+            <div class="bg-[#0b1120]/95 border rounded-xl px-4 py-3 w-[min(92%,300px)]" style="border-color:color-mix(in srgb,var(--acc) 45%,transparent)">
+              <div class="flex items-center gap-2 text-[13px] font-semibold t-acc"><span class="spinner"></span><span id="loadText">Lade Programm von Cartridge …</span></div>
               <div id="loadBar" class="loadbar mt-2"><i></i></div>
             </div>
           </div>
         </div>
 
+        <!-- Programme auf der eingesteckten Cartridge -->
+        <div id="modesWrap" class="mt-4 mb-1" hidden>
+          <div class="text-[11px] text-slate-500 text-center mb-2">Programme auf dieser Cartridge</div>
+          <div id="modes" class="flex flex-wrap gap-2 justify-center" role="radiogroup" aria-label="Programm wählen"></div>
+        </div>
+
         <!-- Gehäuse -->
-        <div id="brain" class="brain">
+        <div id="brain" class="brain mt-3">
           <span class="screw" style="top:8px;left:8px"></span><span class="screw" style="top:8px;right:8px"></span>
           <span class="screw" style="bottom:8px;left:8px"></span><span class="screw" style="bottom:8px;right:8px"></span>
 
@@ -287,9 +310,9 @@
         </div>
 
         <div class="mt-3 flex flex-wrap gap-2">
-          <button type="button" id="btnPreset" class="btn btn-live">Standard-Auto zusammenstecken</button>
+          <button type="button" id="btnPreset" class="btn btn-acc">Standard-Bauteile zusammenstecken</button>
           <button type="button" id="btnUnplug" class="btn">Alle Bauteile abziehen</button>
-          <button type="button" id="btnEject" class="btn btn-red">Cartridge auswerfen</button>
+          <button type="button" id="btnEject" class="btn btn-acc-strong">Cartridge auswerfen</button>
         </div>
       </section>
 
@@ -307,18 +330,18 @@
       <!-- Live-Vorschau + Gamepad -->
       <section class="panel p-4 lg:col-span-7" aria-label="Live-Vorschau">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="panel-title">Live-Vorschau · Auto von oben</h2>
-          <span class="mono text-xs text-cyan-300"><span id="speedOut">0</span> cm/s</span>
+          <h2 class="panel-title">Live-Vorschau · <span id="vehicleName">Auto</span> von oben</h2>
+          <span class="mono text-xs t-acc"><span id="speedOut">0</span> cm/s</span>
         </div>
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex-1 min-w-0">
             <div id="cvWrap" class="rounded-xl overflow-hidden border border-bp-edge">
-              <canvas id="preview" aria-label="2D-Vorschau des Autos mit Ultraschall-Kegel und verschiebbarem Hindernis" role="img"></canvas>
+              <canvas id="preview" aria-label="2D-Vorschau des Fahrzeugs mit Ultraschall-Kegel und verschiebbarem Hindernis" role="img"></canvas>
             </div>
             <label class="block mt-3">
               <span class="flex items-center justify-between text-xs text-slate-300">
                 <span>Hindernis-Abstand (Sensor-Test)</span>
-                <output class="mono text-cyan-300" data-dist-out>200 cm</output>
+                <output class="mono t-acc" data-dist-out>200 cm</output>
               </span>
               <input type="range" min="2" max="200" step="1" value="200" data-dist aria-label="Abstand des Hindernisses in Zentimetern" class="mt-1" />
             </label>
@@ -354,7 +377,7 @@
       <section class="panel p-4 lg:col-span-5 flex flex-col" aria-label="System-Log">
         <div class="flex items-center justify-between mb-3">
           <h2 class="panel-title">Live-Konsole · Was denkt das Gehirn?</h2>
-          <button type="button" id="btnClearLog" class="text-xs text-slate-400 hover:text-cyan-300">Leeren</button>
+          <button type="button" id="btnClearLog" class="text-xs text-slate-400 hover-acc">Leeren</button>
         </div>
         <div class="relative flex-1 min-h-[320px]">
           <div id="console" class="console absolute inset-0 overflow-y-auto pr-1" role="log" aria-live="polite"></div>
@@ -375,8 +398,8 @@
           Greifen mehrere Regeln für dasselbe Ziel, gewinnt die <b>oberste</b>. „SONST“ wird ausgeführt, wenn für dieses Ziel keine Regel greift.
         </p>
         <label class="block mt-4 max-w-sm">
-          <span class="text-xs text-slate-400">Name deiner Cartridge</span>
-          <input id="cartName" type="text" maxlength="22" class="sel w-full mt-1" value="Meine Cartridge" />
+          <span class="text-xs text-slate-400">Name deines Programms</span>
+          <input id="progName" type="text" maxlength="22" class="sel w-full mt-1" value="Mein Programm" />
         </label>
         <div id="rules" class="mt-4 space-y-3"></div>
         <div class="mt-4 flex flex-wrap gap-2">
@@ -388,7 +411,11 @@
 
       <div class="lg:col-span-4 space-y-4">
         <div class="panel p-4">
-          <h2 class="panel-title">Leere Cartridge</h2>
+          <h2 class="panel-title">Ziel-Cartridge</h2>
+          <label class="block mt-3">
+            <span class="text-xs text-slate-400">Speichern auf</span>
+            <select id="sbTarget" class="sel w-full mt-1" aria-label="Cartridge, auf die gespeichert wird"></select>
+          </label>
           <div class="flex gap-4 items-center mt-3">
             <div id="sbCart" class="w-[92px] flex-none"></div>
             <div class="min-w-0">
@@ -397,20 +424,21 @@
             </div>
           </div>
           <div id="sbWrite" class="mt-3" hidden>
-            <div class="flex items-center gap-2 text-xs text-red-200"><span class="spinner"></span>Schreibe Programm auf die Cartridge …</div>
+            <div class="flex items-center gap-2 text-xs t-acc"><span class="spinner"></span>Schreibe Programm auf die Cartridge …</div>
             <div id="sbBar" class="loadbar mt-2" style="--dur:1.1s"><i></i></div>
           </div>
           <div class="mt-4 flex flex-wrap gap-2">
-            <button type="button" id="btnSave" class="btn btn-red">Auf leere Cartridge speichern</button>
-            <button type="button" id="btnTest" class="btn btn-live">Einstecken &amp; testen</button>
+            <button type="button" id="btnSave" class="btn btn-acc-strong">Auf Cartridge speichern</button>
+            <button type="button" id="btnTest" class="btn btn-acc">Einstecken &amp; testen</button>
           </div>
+          <p class="text-[11px] text-slate-500 mt-3">Deine Regeln landen als Programm „Eigene Logik“ auf der gewählten Cartridge – zusätzlich zu ihren fertigen Programmen.</p>
         </div>
 
         <div class="panel p-4">
           <h2 class="panel-title">Live-Test deiner Regeln</h2>
           <label class="block mt-3">
             <span class="flex items-center justify-between text-xs text-slate-300">
-              <span>Ultraschall-Abstand</span><output class="mono text-cyan-300" data-dist-out>200 cm</output>
+              <span>Ultraschall-Abstand</span><output class="mono t-acc" data-dist-out>200 cm</output>
             </span>
             <input type="range" min="2" max="200" step="1" value="200" data-dist aria-label="Abstand für den Regel-Test in Zentimetern" class="mt-1" />
           </label>
@@ -441,7 +469,8 @@ const WHEEL_CIRC = 12.6;       // Radumfang in cm (4 cm Raddurchmesser)
 const MIN_D = 2, MAX_D = 200;  // Messbereich des Ultraschallsensors in cm
 const LOAD_MS = 1400;          // Dauer der Cartridge-Lade-Animation
 const MAX_RULES = 6;
-const LS_KEY = 'santronic_custom_cartridge_v1';
+const LS_KEY = 'santronic_custom_programs_v2';
+const LS_KEY_V1 = 'santronic_custom_cartridge_v1';
 
 // Einfache Strich-Icons für die Bauteile
 const ICONS = {
@@ -452,41 +481,52 @@ const ICONS = {
 };
 const svg = (inner) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
 
-// Alle Bauteile, die man an einen Port stecken kann
+// Alle Bauteile, die man an einen Port stecken kann (color = kleiner Kennpunkt)
 const COMPONENTS = {
   empty:  { label: 'Leer',                              short: 'Leer',         color: '#475569' },
-  motorL: { label: 'Heck-Antriebsmotor (links)',        short: 'Motor links',  color: '#22d3ee', icon: 'motor' },
-  motorR: { label: 'Heck-Antriebsmotor (rechts)',       short: 'Motor rechts', color: '#38bdf8', icon: 'motor' },
+  motorL: { label: 'Antriebsmotor (links)',             short: 'Motor links',  color: '#22d3ee', icon: 'motor' },
+  motorR: { label: 'Antriebsmotor (rechts)',            short: 'Motor rechts', color: '#38bdf8', icon: 'motor' },
   sonar:  { label: 'Ultraschall-Frontsensor (Abstand)', short: 'Ultraschall',  color: '#a78bfa', icon: 'sonar' },
   servo:  { label: 'Servo-Lenkung',                     short: 'Lenkung',      color: '#4ade80', icon: 'servo' },
   led:    { label: 'LED-Lichtmodul',                    short: 'Licht',        color: '#facc15', icon: 'led' }
 };
 const COMPONENT_ORDER = ['empty', 'motorL', 'motorR', 'sonar', 'servo', 'led'];
 
-// Erklärung, die beim Einstecken eines Bauteils im Log erscheint
-const PLUG_HINTS = {
-  motorL: 'Er treibt das linke Hinterrad an. Die Drehzahl siehst du unter „Live-Werte“.',
-  motorR: 'Er treibt das rechte Hinterrad an. Die Drehzahl siehst du unter „Live-Werte“.',
-  sonar:  'Er misst wie eine Fledermaus per Echo den Abstand nach vorne. Teste ihn mit dem Abstands-Regler.',
-  servo:  'Sie dreht die Vorderräder nach links und rechts.',
-  led:    'Scheinwerfer und Warnblinker. Probiere den Knopf „Licht testen“.'
+// Was ein Motor/Servo je nach Fahrzeug antreibt
+const VEHICLES = {
+  car:   { noun: 'Auto',    art: 'Das Auto',    acc: 'das Auto',    indef: 'ein Auto',      drive: 'fahren',  go: 'fährt',  motor: 'Hinterrad',   servo: 'dreht die Vorderräder' },
+  boat:  { noun: 'Schiff',  art: 'Das Schiff',  acc: 'das Schiff',  indef: 'ein Schiff',    drive: 'steuern', go: 'fährt',  motor: 'Propeller',   servo: 'bewegt das Ruder' },
+  drone: { noun: 'Drohne',  art: 'Die Drohne',  acc: 'die Drohne',  indef: 'eine Drohne',   drive: 'fliegen', go: 'fliegt', motor: 'Rotorpaar',   servo: 'dreht die Drohne um ihre Achse' },
+  robot: { noun: 'Roboter', art: 'Der Roboter', acc: 'den Roboter', indef: 'einen Roboter', drive: 'fahren',  go: 'fährt',  motor: 'Rad',         servo: 'dreht den Sensorkopf' }
 };
 
-// Die Programm-Cartridges
+// Die vier Cartridge-Arten: Farbe = Fahrzeug-Art = Farbthema des Interfaces
 const CARTRIDGES = {
-  rc:       { name: 'RC-Sportwagen',        color: '#ef4444', ink: '#fff',    desc: 'Selbst fahren mit dem Gamepad' },
-  explorer: { name: 'Autonomer Entdecker',  color: '#3b82f6', ink: '#fff',    desc: 'Fährt allein & weicht unter 20 cm aus' },
-  guard:    { name: 'Wach-Roboter / Alarm', color: '#eab308', ink: '#0f172a', desc: 'Alarm bei Annäherung oder Bewegung' },
-  custom:   { name: 'Leere Cartridge',      color: '#e2e8f0', ink: '#0f172a', desc: '' }
+  auto:    { name: 'Auto',    sub: 'Für alles, was fährt',   color: '#ef4444', ink: '#fff',    vehicle: 'car',   programs: ['manual', 'explorer', 'custom'] },
+  schiff:  { name: 'Schiff',  sub: 'Für Boote & Schiffe',    color: '#3b82f6', ink: '#fff',    vehicle: 'boat',  programs: ['manual', 'explorer', 'custom'] },
+  flug:    { name: 'Flug',    sub: 'Für alles, was fliegt',  color: '#e2e8f0', ink: '#0f172a', vehicle: 'drone', programs: ['manual', 'explorer', 'custom'] },
+  roboter: { name: 'Roboter', sub: 'Wach- & Helfer-Roboter', color: '#eab308', ink: '#0f172a', vehicle: 'robot', programs: ['guard', 'manual', 'custom'] }
 };
+
+// Erklärung, die beim Einstecken eines Bauteils im Log erscheint
+function plugHint(type) {
+  const v = vehicle();
+  return {
+    motorL: `Er treibt ${v.motor === 'Rotorpaar' ? 'das linke Rotorpaar' : v.motor === 'Propeller' ? 'den linken Propeller' : 'das linke ' + v.motor} an. Die Drehzahl siehst du unter „Live-Werte“.`,
+    motorR: `Er treibt ${v.motor === 'Rotorpaar' ? 'das rechte Rotorpaar' : v.motor === 'Propeller' ? 'den rechten Propeller' : 'das rechte ' + v.motor} an. Die Drehzahl siehst du unter „Live-Werte“.`,
+    sonar:  'Er misst wie eine Fledermaus per Echo den Abstand nach vorne. Teste ihn mit dem Abstands-Regler.',
+    servo:  `Sie ${v.servo}.`,
+    led:    'Scheinwerfer und Warnblinker. Probiere den Knopf „Licht testen“.'
+  }[type];
+}
 
 // Bausteine für den No-Code-Editor
 const SENSORS = { sonar: 'Ultraschallsensor (Abstand)' };
 const OPS = { lt: 'kleiner als', gt: 'größer als' };
 const TARGETS = {
-  motors: { label: 'Motoren',            actions: { stop: 'Stoppen', forward: 'Vorwärts fahren', slow: 'Langsam vorwärts', backward: 'Rückwärts fahren' } },
-  steer:  { label: 'Lenkung',            actions: { left: 'Links einschlagen', straight: 'Geradeaus', right: 'Rechts einschlagen' } },
-  led:    { label: 'LED-Lichtmodul',     actions: { on: 'Einschalten', off: 'Ausschalten', blink: 'Blinken' } },
+  motors: { label: 'Motoren',             actions: { stop: 'Stoppen', forward: 'Vorwärts fahren', slow: 'Langsam vorwärts', backward: 'Rückwärts fahren' } },
+  steer:  { label: 'Lenkung',             actions: { left: 'Links einschlagen', straight: 'Geradeaus', right: 'Rechts einschlagen' } },
+  led:    { label: 'LED-Lichtmodul',      actions: { on: 'Einschalten', off: 'Ausschalten', blink: 'Blinken' } },
   status: { label: 'Status-LEDs (Alarm)', actions: { alarm: 'Alarm blinken', calm: 'Ruhig bleiben' } }
 };
 // Satzbausteine für die Klartext-Vorschau („..., dann stoppen die Motoren.“)
@@ -508,16 +548,18 @@ const state = {
   power: false, booting: false, bootToken: 0,
   bt: 'off',                       // off | searching | connected | disconnected
   ports: { A: 'empty', B: 'empty', C: 'empty', D: 'empty' },
-  cartridge: null,                 // physisch eingesteckte Cartridge
-  program: null,                   // aktuell laufendes Programm
+  cartridge: null,                 // physisch eingesteckte Cartridge (auto | schiff | flug | roboter)
+  mode: null,                      // gewähltes Programm auf der Cartridge
+  program: null,                   // tatsächlich laufendes Programm (manual | explorer | guard | custom)
   loading: false, loadToken: 0,
   distance: MAX_D,                 // Abstand Hindernis ↔ Sensor in cm
   obstacleShift: 0,                // seitliche Verschiebung des Hindernisses (Ausweichmanöver)
   draggingDistance: false,
-  lightManual: false,              // Licht-Taste im RC-Modus
+  lightManual: false,              // Licht-Taste im manuellen Modus
   ledTest: false,                  // „Licht testen“ ohne Programm
-  custom: null,                    // gespeicherte eigene Cartridge { name, rules }
-  draft: { name: 'Meine Cartridge', rules: EXAMPLE_RULES.map(r => ({ ...r })) },
+  customs: {},                     // eigene Logik je Cartridge: { auto: { name, rules }, ... }
+  draft: { name: 'Mein Programm', rules: EXAMPLE_RULES.map(r => ({ ...r })) },
+  sbTarget: 'auto',
   saving: false,
   tab: 'sim'
 };
@@ -532,7 +574,7 @@ const sim = {
   led: 'off', alarm: false, alarmUntil: 0,
   explorer: { phase: 'drive', t: 0 },
   guard: { armedAt: 0, armed: false, last: MAX_D, acc: 0, wasAlarm: false },
-  rc: { lastKey: '0,0' },
+  manual: { lastKey: '0,0' },
   custom: { lastKey: '' }
 };
 
@@ -549,12 +591,19 @@ const hasMotor = () => has('motorL') || has('motorR');
 const motorPorts = () => PORT_IDS.filter(p => state.ports[p] === 'motorL' || state.ports[p] === 'motorR');
 const joinList = (arr) => arr.length <= 1 ? arr.join('') : arr.slice(0, -1).join(', ') + ' & ' + arr[arr.length - 1];
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-const cartName = (id) => id === 'custom' ? (state.custom ? state.custom.name : 'Leere Cartridge') : CARTRIDGES[id].name;
-const cartDesc = (id) => id === 'custom'
-  ? (state.custom ? plural(state.custom.rules.length, 'eigene Regel', 'eigene Regeln') : 'Leer – im Tab „Eigene Logik“ beschreiben')
-  : CARTRIDGES[id].desc;
+const vehicleType = (id = state.cartridge) => (id ? CARTRIDGES[id].vehicle : 'car');
+const vehicle = (id = state.cartridge) => VEHICLES[vehicleType(id)];
+const cartName = (id) => CARTRIDGES[id].name;
 const idleOutput = () => ({ throttle: 0, steer: 0, led: 'off', alarm: false, freeze: false });
 const restartAnim = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+
+function programLabel(mode, id = state.cartridge) {
+  if (mode === 'manual') return `Manuell ${vehicle(id).drive}`;
+  if (mode === 'explorer') return 'Autonomer Entdecker';
+  if (mode === 'guard') return 'Wach-Modus (Alarm)';
+  const c = id && state.customs[id];
+  return c ? `Eigene Logik: ${c.name}` : 'Eigene Logik (leer)';
+}
 
 /* =========================================================
    4) LIVE-KONSOLE (anfängerfreundliches System-Log)
@@ -562,11 +611,11 @@ const restartAnim = (el, cls) => { el.classList.remove(cls); void el.offsetWidth
 const consoleEl = $('#console');
 const LOG_STYLES = {
   info:   { icon: '›', cls: 'text-slate-300' },
-  ok:     { icon: '✔', cls: 'text-cyan-300' },
+  ok:     { icon: '✔', cls: 't-acc' },
   warn:   { icon: '!', cls: 'text-amber-300' },
   action: { icon: '→', cls: 'text-white' },
   alarm:  { icon: '⚠', cls: 'text-red-400' },
-  cart:   { icon: '▣', cls: 'text-red-300' }
+  cart:   { icon: '▣', cls: 't-acc' }
 };
 const lastLogged = new Map();
 
@@ -616,7 +665,7 @@ function powerOn() {
     state.bt = 'connected'; state.booting = false;
     log('ok', 'Bluetooth verbunden – dein Smartphone ist jetzt die Fernbedienung.');
     renderAll();
-    if (state.cartridge) loadProgram(state.cartridge);
+    if (state.cartridge) loadCartridge(state.cartridge);
     else log('info', 'Bereit. Stecke eine Cartridge in den Easy-Play Slot oben am Gehirn.');
   });
 }
@@ -680,7 +729,7 @@ function setPort(p, type) {
   } else if (type === 'empty') {
     log('warn', `Port ${p}: ${COMPONENTS[prev].label} wurde abgezogen.`);
   } else {
-    log('ok', `Port ${p} erkannt: ${COMPONENTS[type].label} – eingerastet. ${PLUG_HINTS[type]}`);
+    log('ok', `Port ${p} erkannt: ${COMPONENTS[type].label} – eingerastet. ${plugHint(type)}`);
   }
 
   if (state.power && state.program) checkRequirements(state.program);
@@ -722,7 +771,6 @@ function updatePorts() {
     const c = COMPONENTS[type];
     const el = $(`.port[data-port="${p}"]`);
     const active = type !== 'empty' && state.power;
-    el.style.setProperty('--pc', c.color);
     el.classList.toggle('is-active', active);
     el.classList.toggle('is-plugged', type !== 'empty');
     el.querySelector('[data-socket]').innerHTML = type === 'empty'
@@ -739,15 +787,20 @@ function plugPreset() {
 }
 
 /* =========================================================
-   7) CARTRIDGES (Easy-Play Slot)
+   7) CARTRIDGES (Easy-Play Slot) & FARBTHEMA
    ========================================================= */
+function applyTheme() {
+  if (state.cartridge) document.documentElement.dataset.cart = state.cartridge;
+  else delete document.documentElement.dataset.cart;
+  $('#vehicleName').textContent = vehicle().noun;
+}
+
 function cartHTML(id) {
   const c = CARTRIDGES[id];
-  const badge = id === 'custom' ? (state.custom ? 'EIGENES PROGR.' : 'LEER') : 'EASY-PLAY';
   return `<div class="cart" style="--cc:${c.color}">
       <div class="cart-label">
-        <span class="t">${esc(cartName(id))}</span>
-        <span class="b" style="background:${id === 'custom' ? '#0f172a' : c.color};color:${id === 'custom' ? '#e2e8f0' : c.ink}">${badge}</span>
+        <span class="t">${esc(c.name)}</span>
+        <span class="b" style="background:${id === 'flug' ? '#0f172a' : c.color};color:${id === 'flug' ? '#f8fafc' : c.ink}">EASY-PLAY</span>
       </div>
       <div class="cart-grip"></div><div class="cart-pins"></div>
     </div>`;
@@ -757,44 +810,51 @@ function renderShelf() {
   $('#shelf').innerHTML = Object.keys(CARTRIDGES).map(id => {
     const inserted = state.cartridge === id;
     return `<div class="shelf-item ${inserted ? 'is-inserted' : ''}" role="button" tabindex="0" draggable="${!inserted}" data-cart="${id}"
-              aria-label="${inserted ? 'Auswerfen' : 'Einstecken'}: ${esc(cartName(id))}">
+              aria-label="${inserted ? 'Auswerfen' : 'Einstecken'}: Cartridge ${esc(cartName(id))}">
         ${cartHTML(id)}
-        <span class="block mt-1.5 text-[10.5px] leading-tight text-slate-300 text-center">${inserted ? 'steckt im Slot' : esc(cartDesc(id))}</span>
+        <span class="block mt-1.5 text-[10.5px] leading-tight text-slate-300 text-center">${inserted ? 'steckt im Slot' : esc(CARTRIDGES[id].sub)}</span>
       </div>`;
   }).join('');
 }
 
-function insertCartridge(id) {
-  if (!CARTRIDGES[id] || state.cartridge === id) return;
+function insertCartridge(id, mode) {
+  if (!CARTRIDGES[id]) return;
+  if (state.cartridge === id) {
+    if (mode) selectMode(mode);
+    return;
+  }
   if (state.cartridge) ejectCartridge(true);
   state.cartridge = id;
-  log('cart', `Cartridge „${cartName(id)}“ eingesteckt – klick! Sie ist eingerastet.`);
-  renderShelf(); renderSlot(true);
+  state.mode = mode || CARTRIDGES[id].programs[0];
+  applyTheme();
+  log('cart', `Cartridge „${cartName(id)}“ eingesteckt – klick! Das Gehirn färbt sich ${{ auto: 'rot', schiff: 'blau', flug: 'weiß', roboter: 'gelb' }[id]}.`);
+  renderShelf(); renderSlot(true); renderModes();
   if (!state.power) {
-    log('info', 'Das Gehirn ist noch aus. Drück den Power-Knopf, dann wird das Programm geladen.');
+    log('info', 'Das Gehirn ist noch aus. Drück den Power-Knopf, dann werden die Programme geladen.');
     renderBrain();
     return;
   }
   if (state.booting) return; // wird nach dem Hochfahren automatisch geladen
-  loadProgram(id);
+  loadCartridge(id);
 }
 
 function ejectCartridge(silent) {
   if (!state.cartridge) return;
   const name = cartName(state.cartridge);
-  state.cartridge = null; state.program = null; state.loading = false; state.loadToken++;
+  state.cartridge = null; state.mode = null; state.program = null; state.loading = false; state.loadToken++;
   resetProgramState();
   clearInputs();
+  applyTheme();
   if (!silent) log('cart', `Cartridge „${name}“ ausgeworfen. Programm beendet, Motoren gestoppt.`);
-  renderShelf(); renderSlot(true); renderBrain();
+  renderShelf(); renderSlot(true); renderModes(); renderBrain();
 }
 
-function loadProgram(id) {
+function loadCartridge(id) {
   const token = ++state.loadToken;
   state.program = null; state.loading = true; state.ledTest = false;
   resetProgramState();
   renderSlot(); renderBrain();
-  log('info', `Lade Programm von Cartridge „${cartName(id)}“ …`);
+  log('info', `Lade Programme von Cartridge „${cartName(id)}“ …`);
   $('#loadText').textContent = 'Lade Programm von Cartridge …';
   restartAnim($('#loadBar'), 'run');
   setTimeout(() => { if (token === state.loadToken) $('#loadText').textContent = 'Prüfe angesteckte Bauteile …'; }, LOAD_MS * 0.4);
@@ -802,54 +862,83 @@ function loadProgram(id) {
   setTimeout(() => {
     if (token !== state.loadToken || !state.power || state.cartridge !== id) return;
     state.loading = false;
-    if (id === 'custom' && !state.custom) {
-      log('warn', 'Diese Cartridge ist noch leer – es gibt kein Programm zum Laden. Baue im Tab „Eigene Logik bauen“ eine Regel und speichere sie darauf.');
-      renderSlot(); renderBrain();
-      return;
-    }
-    state.program = id;
-    resetProgramState();
-    log('ok', `Programm „${cartName(id)}“ läuft!`);
-    explainProgram(id);
-    checkRequirements(id);
-    renderSlot(); renderBrain();
+    log('ok', `Cartridge „${cartName(id)}“ bereit – das Gehirn steuert jetzt ${vehicle(id).indef}.`);
+    startProgram(state.mode);
   }, LOAD_MS);
 }
 
-function explainProgram(id) {
-  const texts = {
-    rc: 'So geht’s: Halte die Pfeile auf dem Gamepad gedrückt (oder W/A/S/D auf der Tastatur), um zu fahren. Die Glühbirne schaltet das Licht.',
-    explorer: 'So geht’s: Das Auto fährt allein los. Kommt ein Hindernis näher als 20 cm, stoppt es, fährt zurück und weicht aus. Schieb den Abstands-Regler, um es zu testen!',
-    guard: 'So geht’s: Das Auto bleibt stehen und passt auf. Kommt etwas näher als 60 cm oder bewegt sich etwas vor dem Sensor, blinken die Status-LEDs.'
-  };
-  if (texts[id]) { log('info', texts[id]); return; }
-  if (id === 'custom' && state.custom) {
-    state.custom.rules.forEach((r, i) => log('info', `Regel ${i + 1}: ${ruleSentence(r)}`));
+function startProgram(mode) {
+  state.mode = mode;
+  if (mode === 'custom' && !state.customs[state.cartridge]) {
+    state.program = null;
+    log('warn', `Auf der Cartridge „${cartName(state.cartridge)}“ ist noch keine eigene Logik gespeichert. Baue sie im Tab „Eigene Logik bauen“.`);
+  } else {
+    state.program = mode;
+    resetProgramState();
+    log('ok', `Programm „${programLabel(mode)}“ läuft!`);
+    explainProgram(mode);
+    checkRequirements(mode);
+  }
+  renderModes(); renderSlot(); renderBrain();
+}
+
+// Programm auf der eingesteckten Cartridge wechseln
+function selectMode(mode) {
+  if (!state.cartridge || !CARTRIDGES[state.cartridge].programs.includes(mode)) return;
+  if (state.mode === mode && (state.program === mode || state.loading)) return;
+  state.mode = mode;
+  if (state.power && !state.booting && !state.loading) startProgram(mode);
+  else {
+    log('info', `Programm „${programLabel(mode)}“ ausgewählt. Es startet, sobald das Gehirn läuft.`);
+    renderModes();
   }
 }
 
+function renderModes() {
+  const wrap = $('#modes');
+  $('#modesWrap').hidden = !state.cartridge;
+  if (!state.cartridge) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = CARTRIDGES[state.cartridge].programs.map(m => {
+    const label = m === 'custom' ? (state.customs[state.cartridge] ? 'Eigene Logik' : 'Eigene Logik (leer)') : programLabel(m);
+    return `<button type="button" role="radio" class="mode-btn" aria-checked="${m === state.mode}" data-mode="${m}">${esc(label)}</button>`;
+  }).join('');
+}
+
+function explainProgram(mode) {
+  const v = vehicle();
+  const texts = {
+    manual: `So geht’s: Halte die Pfeile auf dem Gamepad gedrückt (oder W/A/S/D auf der Tastatur), um ${v.acc} zu ${v.drive}. Die Glühbirne schaltet das Licht.`,
+    explorer: `So geht’s: ${v.art} ${v.go} allein los. Kommt ein Hindernis näher als 20 cm, stoppt ${v.art.split(' ')[0] === 'Die' ? 'sie' : v.art.split(' ')[0] === 'Der' ? 'er' : 'es'}, ${v.go} zurück und weicht aus. Schieb den Abstands-Regler, um es zu testen!`,
+    guard: `So geht’s: ${v.art} bleibt stehen und passt auf. Kommt etwas näher als 60 cm oder bewegt sich etwas vor dem Sensor, blinken die Status-LEDs.`
+  };
+  if (texts[mode]) { log('info', texts[mode]); return; }
+  const c = state.customs[state.cartridge];
+  if (mode === 'custom' && c) c.rules.forEach((r, i) => log('info', `Regel ${i + 1}: ${ruleSentence(r)}`));
+}
+
 // Prüft, ob alle Bauteile für ein Programm angesteckt sind, und erklärt, was fehlt
-function checkRequirements(id) {
+function checkRequirements(mode) {
   const missing = [];
-  if ((id === 'rc' || id === 'explorer') && !hasMotor()) missing.push('mindestens ein Heck-Antriebsmotor');
-  if ((id === 'explorer' || id === 'guard') && !has('sonar')) missing.push('der Ultraschall-Frontsensor');
-  if (id === 'custom' && state.custom) {
-    const targets = new Set(state.custom.rules.map(r => r.target));
+  if ((mode === 'manual' || mode === 'explorer') && !hasMotor()) missing.push('mindestens ein Antriebsmotor');
+  if ((mode === 'explorer' || mode === 'guard') && !has('sonar')) missing.push('der Ultraschall-Frontsensor');
+  const c = state.customs[state.cartridge];
+  if (mode === 'custom' && c) {
+    const targets = new Set(c.rules.map(r => r.target));
     if (!has('sonar')) missing.push('der Ultraschall-Frontsensor (deine Regeln fragen ihn ab)');
-    if (targets.has('motors') && !hasMotor()) missing.push('mindestens ein Heck-Antriebsmotor');
+    if (targets.has('motors') && !hasMotor()) missing.push('mindestens ein Antriebsmotor');
     if (targets.has('steer') && !has('servo') && !hasMotor()) missing.push('die Servo-Lenkung');
     if (targets.has('led') && !has('led')) missing.push('das LED-Lichtmodul');
   }
   if (missing.length) log('warn', `Für dieses Programm fehlt noch ${joinList(missing)}. Stecke es an einen freien Port.`);
   else log('ok', 'Alle benötigten Bauteile sind angesteckt.');
-  if (id === 'rc' && state.bt !== 'connected') log('warn', 'Achtung: Bluetooth ist nicht verbunden – das Gamepad funktioniert erst, wenn die BT-LED leuchtet.');
+  if (mode === 'manual' && state.bt !== 'connected') log('warn', 'Achtung: Bluetooth ist nicht verbunden – das Gamepad funktioniert erst, wenn die BT-LED leuchtet.');
 }
 
 function resetProgramState() {
   sim.explorer = { phase: 'drive', t: 0 };
   sim.guard = { armedAt: performance.now() + 1200, armed: false, last: state.distance, acc: 0, wasAlarm: false };
   sim.alarmUntil = 0; sim.alarm = false;
-  sim.rc.lastKey = '0,0';
+  sim.manual.lastKey = '0,0';
   sim.custom.lastKey = '';
   state.obstacleShift = 0;
   state.lightManual = false;
@@ -874,30 +963,30 @@ function renderSlot(force) {
 }
 
 /* =========================================================
-   8) PROGRAMME DER CARTRIDGES
+   8) PROGRAMME
    ========================================================= */
 
-// Cartridge 1: RC-Sportwagen – manuelles Fahren
-function runRC() {
+// Manuell fahren / steuern / fliegen per Gamepad
+function runManual() {
   const out = idleOutput();
   out.led = state.lightManual ? 'on' : 'off';
   const pressed = input.up || input.down || input.left || input.right;
   if (state.bt !== 'connected') {
-    if (pressed) logOnce('rc-bt', 'warn', 'Keine Bluetooth-Verbindung – das Gehirn hört das Gamepad nicht. Tippe auf die Bluetooth-LED zum Verbinden.');
+    if (pressed) logOnce('man-bt', 'warn', 'Keine Bluetooth-Verbindung – das Gehirn hört das Gamepad nicht. Tippe auf die Bluetooth-Anzeige zum Verbinden.');
     return out;
   }
   out.throttle = (input.up ? 1 : 0) - (input.down ? 1 : 0);
   out.steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
 
   const key = `${out.throttle},${out.steer}`;
-  if (key !== sim.rc.lastKey) {
-    sim.rc.lastKey = key;
-    if (key === '0,0') logOnce('rc-stop', 'info', 'Gamepad losgelassen → Motoren bremsen bis zum Stillstand.', 2500);
-    else if (!hasMotor()) logOnce('rc-nomotor', 'warn', 'Gamepad gedrückt, aber es ist kein Motor angesteckt – nichts kann sich drehen.');
-    else logOnce('rc-' + key, 'action', describeDrive(out.throttle, out.steer), 1500);
+  if (key !== sim.manual.lastKey) {
+    sim.manual.lastKey = key;
+    if (key === '0,0') logOnce('man-stop', 'info', 'Gamepad losgelassen → Motoren bremsen bis zum Stillstand.', 2500);
+    else if (!hasMotor()) logOnce('man-nomotor', 'warn', 'Gamepad gedrückt, aber es ist kein Motor angesteckt – nichts kann sich drehen.');
+    else logOnce('man-' + key, 'action', describeDrive(out.throttle, out.steer), 1500);
   }
   if (out.throttle > 0 && has('sonar') && state.distance < 15) {
-    logOnce('rc-near', 'warn', `Achtung: Das Hindernis ist nur noch ${Math.round(state.distance)} cm entfernt!`, 3000);
+    logOnce('man-near', 'warn', `Achtung: Das Hindernis ist nur noch ${Math.round(state.distance)} cm entfernt!`, 3000);
   }
   return out;
 }
@@ -909,15 +998,15 @@ function describeDrive(th, st) {
   if (th !== 0) {
     let s = `Gamepad: ${th > 0 ? 'Vorwärts' : 'Rückwärts'}${st ? ' + ' + side : ''} → Motoren an Port ${mp} drehen ${th > 0 ? 'vorwärts' : 'rückwärts'}`;
     if (st && has('servo')) s += `, Servo an Port ${servoP} lenkt nach ${side}`;
-    else if (st) s += `, die Motoren drehen unterschiedlich schnell für die Kurve`;
+    else if (st) s += ', die Motoren drehen unterschiedlich schnell für die Kurve';
     return s + '.';
   }
   return has('servo')
-    ? `Gamepad: Lenkung ${side} → Servo an Port ${servoP} schlägt die Vorderräder ein (das Auto steht).`
+    ? `Gamepad: Lenkung ${side} → Servo an Port ${servoP} ${vehicle().servo} (${vehicle().noun} bleibt stehen).`
     : `Gamepad: Drehen nach ${side} → linker und rechter Motor drehen gegeneinander.`;
 }
 
-// Cartridge 2: Autonomer Entdecker – Hindernisvermeidung
+// Autonomer Entdecker – Hindernisvermeidung
 function setExplorerPhase(p) { sim.explorer.phase = p; sim.explorer.t = 0; }
 
 function runExplorer(dt) {
@@ -925,11 +1014,11 @@ function runExplorer(dt) {
   const ex = sim.explorer;
   ex.t += dt;
   if (!has('sonar')) {
-    logOnce('ex-sonar', 'warn', 'Der Entdecker braucht den Ultraschall-Frontsensor als „Augen“. Ohne ihn fährt er aus Sicherheitsgründen nicht los.', 8000);
+    logOnce('ex-sonar', 'warn', `Der Entdecker braucht den Ultraschall-Frontsensor als „Augen“. Ohne ihn ${vehicle().go} ${vehicle().art.toLowerCase()} aus Sicherheitsgründen nicht los.`, 8000);
     return out;
   }
   if (!hasMotor()) {
-    logOnce('ex-motor', 'warn', 'Keine Heck-Antriebsmotoren angesteckt – der Entdecker kann denken, aber nicht fahren.', 8000);
+    logOnce('ex-motor', 'warn', 'Keine Antriebsmotoren angesteckt – der Entdecker kann denken, aber sich nicht bewegen.', 8000);
     return out;
   }
   const d = Math.round(state.distance);
@@ -946,35 +1035,35 @@ function runExplorer(dt) {
       out.led = 'blink';
       if (ex.t > 0.6) {
         setExplorerPhase('reverse');
-        log('action', `Fahre rückwärts, um Abstand zu gewinnen (Motoren an Port ${mp} drehen andersherum).`);
+        log('action', `Rückwärts, um Abstand zu gewinnen (Motoren an Port ${mp} drehen andersherum).`);
       }
       break;
     case 'reverse':
       out.throttle = -0.45; out.led = 'blink';
       if (state.distance >= 45 || (ex.t > 4 && !state.draggingDistance)) {
         setExplorerPhase('turn');
-        log('action', `Genug Abstand (${d} cm). Lenke nach rechts, um am Hindernis vorbeizufahren.`);
+        log('action', `Genug Abstand (${d} cm). Weiche nach rechts aus, um am Hindernis vorbeizukommen.`);
       }
       break;
     case 'turn':
       out.throttle = 0.4; out.steer = 1; out.led = 'on'; out.freeze = true;
-      state.obstacleShift = -0.75 * Math.min(1, ex.t / 1.4); // Hindernis wandert aus dem Fahrweg
+      state.obstacleShift = -0.75 * Math.min(1, ex.t / 1.4); // Hindernis wandert aus dem Weg
       if (ex.t > 1.4 && !state.draggingDistance) {
         state.distance = MAX_D; state.obstacleShift = 0;
         setExplorerPhase('drive');
-        log('ok', 'Hindernis umfahren – der Weg ist frei. Fahre weiter geradeaus.');
+        log('ok', 'Hindernis umgangen – der Weg ist frei. Weiter geradeaus.');
       }
       break;
   }
   return out;
 }
 
-// Cartridge 3: Wach-Roboter – Alarm bei Annäherung oder Bewegung
+// Wach-Modus – Alarm bei Annäherung oder Bewegung
 function runGuard(dt, now) {
   const out = idleOutput();
   const g = sim.guard;
   if (!has('sonar')) {
-    logOnce('guard-sonar', 'warn', 'Der Wach-Roboter braucht den Ultraschallsensor als „Auge“. Stecke ihn an einen Port.', 8000);
+    logOnce('guard-sonar', 'warn', 'Der Wach-Modus braucht den Ultraschallsensor als „Auge“. Stecke ihn an einen Port.', 8000);
     return out;
   }
   if (now < g.armedAt) return out;
@@ -1000,13 +1089,13 @@ function runGuard(dt, now) {
     }
   }
   out.alarm = now < sim.alarmUntil;
-  if (g.wasAlarm && !out.alarm) log('ok', 'Alles wieder ruhig. Der Wach-Roboter passt weiter auf.');
+  if (g.wasAlarm && !out.alarm) log('ok', 'Alles wieder ruhig. Ich passe weiter auf.');
   g.wasAlarm = out.alarm;
   out.led = out.alarm ? 'blink' : 'off';
   return out;
 }
 
-// Cartridge 4: eigene Regeln aus dem No-Code-Editor
+// Eigene Logik aus dem No-Code-Editor
 function evaluateRules(rules, d, sensorOk) {
   const actions = {}, elseCand = {}, active = [];
   rules.forEach((r, i) => {
@@ -1030,10 +1119,11 @@ function describeActions(actions) {
 
 function runCustom() {
   const out = idleOutput();
-  if (!state.custom) return out;
+  const prog = state.customs[state.cartridge];
+  if (!prog) return out;
   const sensorOk = has('sonar');
   if (!sensorOk) logOnce('cu-sonar', 'warn', 'Deine Regeln fragen den Ultraschallsensor ab, er ist aber nicht angesteckt. Ohne Messwert greift nur „SONST“.', 8000);
-  const rules = state.custom.rules;
+  const rules = prog.rules;
   const res = evaluateRules(rules, state.distance, sensorOk);
   const a = res.actions;
   out.throttle = { stop: 0, forward: 0.55, slow: 0.28, backward: -0.4 }[a.motors] ?? 0;
@@ -1046,7 +1136,9 @@ function runCustom() {
     sim.custom.lastKey = key;
     const d = Math.round(state.distance);
     if (res.active.length) {
-      const which = res.active.map(i => `Regel ${i + 1} (${d} cm ist ${OPS[rules[i].op]} ${rules[i].value} cm)`).join(' und ');
+      // Abrunden bzw. Aufrunden, damit nie „30 cm ist kleiner als 30 cm“ im Log steht
+      const shown = (r) => (r.op === 'lt' ? Math.floor(state.distance) : Math.ceil(state.distance));
+      const which = res.active.map(i => `Regel ${i + 1} (${shown(rules[i])} cm ist ${OPS[rules[i].op]} ${rules[i].value} cm)`).join(' und ');
       log('action', `${which} ${res.active.length > 1 ? 'greifen' : 'greift'} → ${describeActions(a)}.`);
     } else {
       log('action', `Keine WENN-Bedingung erfüllt (${sensorOk ? d + ' cm' : 'kein Sensor'}) → ${Object.keys(a).length ? 'SONST: ' + describeActions(a) : 'nichts zu tun'}.`);
@@ -1064,7 +1156,7 @@ function step(dt, now) {
   let out = idleOutput();
   const running = state.power && !state.loading && state.program;
   if (running) {
-    if (state.program === 'rc') out = runRC();
+    if (state.program === 'manual') out = runManual();
     else if (state.program === 'explorer') out = runExplorer(dt);
     else if (state.program === 'guard') out = runGuard(dt, now);
     else if (state.program === 'custom') out = runCustom();
@@ -1075,7 +1167,7 @@ function step(dt, now) {
   sim.alarm = state.power && out.alarm;
   sim.led = state.power && has('led') ? out.led : 'off';
 
-  // Mischung: Mit Servo lenken die Vorderräder, ohne Servo lenken die Motoren (Differenzial)
+  // Mischung: Mit Servo lenkt Lenkung/Ruder, ohne Servo lenken die Motoren (Differenzial)
   const hasServo = has('servo');
   let l = out.throttle, r = out.throttle;
   if (!hasServo) { l += out.steer * 0.5; r -= out.steer * 0.5; }
@@ -1092,21 +1184,21 @@ function step(dt, now) {
   const targetServo = state.power && hasServo ? out.steer * MAX_STEER : 0;
   sim.servo += (targetServo - sim.servo) * Math.min(1, dt * 8);
 
-  // Geschwindigkeit aus der mittleren Raddrehzahl (cm/s)
+  // Geschwindigkeit aus der mittleren Motordrehzahl (cm/s)
   sim.speed = ((sim.rpmL + sim.rpmR) / 2) / 60 * WHEEL_CIRC;
 
-  // Fährt das Auto, ändert sich der Abstand zum Hindernis
+  // Bewegt sich das Fahrzeug, ändert sich der Abstand zum Hindernis
   let moving = sim.speed;
   if (!state.draggingDistance && !out.freeze) {
     const nd = state.distance - sim.speed * dt;
     if (nd <= MIN_D && sim.speed > 0) {
       moving = 0;
-      logOnce('bump', 'warn', 'Rums! Das Auto steht direkt am Hindernis. Fahr rückwärts oder schieb das Hindernis weg.', 4000);
+      logOnce('bump', 'warn', `Rums! ${vehicle().art} steht direkt am Hindernis. Rückwärts oder das Hindernis wegschieben.`, 4000);
     }
     state.distance = clamp(nd, MIN_D, MAX_D);
   }
 
-  // Rad-Animation & scrollender Boden
+  // Animation: Räder/Propeller & scrollender Untergrund
   sim.phaseL += (sim.rpmL / 60) * dt;
   sim.phaseR += (sim.rpmR / 60) * dt;
   sim.phaseF += (moving / WHEEL_CIRC) * dt;
@@ -1122,6 +1214,19 @@ function step(dt, now) {
 const cv = $('#preview');
 const ctx = cv.getContext('2d');
 let CW = 0, CH = 0, DPR = 1, dragObstacle = false;
+let ACC = [34, 211, 238];
+
+// Aktuelle (ggf. gerade überblendende) Themenfarbe aus CSS lesen
+function readAccent() {
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim();
+  const hex = v.match(/^#([0-9a-f]{6})$/i);
+  if (hex) { const n = parseInt(hex[1], 16); ACC = [(n >> 16) & 255, (n >> 8) & 255, n & 255]; return; }
+  const nums = v.match(/-?[\d.]+/g);
+  if (!nums || nums.length < 3) return;
+  const scale = v.startsWith('color(') ? 255 : 1;
+  ACC = nums.slice(0, 3).map(n => Number(n) * scale);
+}
+const acc = (a) => `rgba(${ACC[0] | 0},${ACC[1] | 0},${ACC[2] | 0},${a})`;
 
 function resizeCanvas() {
   const w = cv.parentElement.clientWidth;
@@ -1133,7 +1238,7 @@ function resizeCanvas() {
   CW = w; CH = h;
 }
 
-// Geometrie: Auto unten, darüber 200 cm Messbereich
+// Geometrie: Fahrzeug unten, darüber 200 cm Messbereich
 function geom() {
   const carW = Math.min(78, Math.max(52, CW * 0.17));
   const carL = carW * 1.6;
@@ -1157,21 +1262,13 @@ function rr(x, y, w, h, r) {
 
 function draw() {
   if (!CW) return;
+  readAccent();
   const t = sim.time;
   const g = geom();
   const cx = CW / 2, fy = g.carTop;
+  const type = vehicleType();
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.fillStyle = '#0a1222';
-  ctx.fillRect(0, 0, CW, CH);
-
-  // Boden-Raster (bewegt sich beim Fahren)
-  const sp = 28, oy = mod(sim.groundY, sp), ox = mod(sim.groundX, sp);
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(56,189,248,.07)';
-  ctx.beginPath();
-  for (let y = oy - sp; y < CH; y += sp) { ctx.moveTo(0, y + .5); ctx.lineTo(CW, y + .5); }
-  for (let x = ox - sp; x < CW; x += sp) { ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, CH); }
-  ctx.stroke();
+  drawGround(type);
 
   // Entfernungsmarken
   ctx.font = '10px "JetBrains Mono", monospace';
@@ -1189,13 +1286,13 @@ function draw() {
 
   if (state.power && has('sonar')) drawCone(g, cx, fy, t);
   drawObstacle(g, cx, fy);
-  drawCar(g, t);
+  drawVehicle(g, t, type);
 
   // Statusanzeige oben rechts
   ctx.textAlign = 'right'; ctx.textBaseline = 'top';
   ctx.font = '600 11px Inter, sans-serif';
   ctx.fillStyle = state.program ? '#e2e8f0' : '#64748b';
-  ctx.fillText(state.program ? `▶ ${cartName(state.program)}` : (state.loading ? 'Lädt …' : 'Kein Programm'), CW - 10, 8);
+  ctx.fillText(state.program ? `▶ ${programLabel(state.program)}` : (state.loading ? 'Lädt …' : 'Kein Programm'), CW - 10, 8);
   if (sim.alarm && Math.floor(t * 4) % 2 === 0) {
     ctx.fillStyle = '#f87171';
     ctx.fillText('ALARM', CW - 10, 24);
@@ -1212,15 +1309,46 @@ function draw() {
   }
 }
 
+// Untergrund: Straße/Boden als Raster, Wasser mit Wellen, Luft mit feinem Raster
+function drawGround(type) {
+  ctx.fillStyle = type === 'boat' ? '#071a33' : '#0a1222';
+  ctx.fillRect(0, 0, CW, CH);
+  ctx.fillStyle = acc(0.035);
+  ctx.fillRect(0, 0, CW, CH);
+  ctx.lineWidth = 1;
+  if (type === 'boat') {
+    const sy = 22, sx = 44;
+    ctx.strokeStyle = 'rgba(147,197,253,.16)';
+    ctx.beginPath();
+    for (let row = -1, y = mod(sim.groundY, sy) - sy; y < CH + sy; y += sy, row++) {
+      const off = mod(sim.groundX + (row % 2) * sx / 2 + sim.time * 6, sx);
+      for (let x = off - sx; x < CW; x += sx) {
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + 5, y - 3, x + 10, y);
+        ctx.quadraticCurveTo(x + 15, y + 3, x + 20, y);
+      }
+    }
+    ctx.stroke();
+    return;
+  }
+  const sp = type === 'robot' ? 40 : 28;
+  const oy = mod(sim.groundY, sp), ox = mod(sim.groundX, sp);
+  ctx.strokeStyle = acc(type === 'drone' ? 0.05 : 0.08);
+  ctx.beginPath();
+  for (let y = oy - sp; y < CH; y += sp) { ctx.moveTo(0, y + .5); ctx.lineTo(CW, y + .5); }
+  for (let x = ox - sp; x < CW; x += sp) { ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, CH); }
+  ctx.stroke();
+}
+
 // Ultraschall-Kegel (15° nach links und rechts)
 function drawCone(g, cx, fy, t) {
   const inPath = Math.abs(state.obstacleShift) < 0.25;
   const d = inPath ? Math.min(state.distance, MAX_D) : MAX_D;
   const half = Math.tan(15 * Math.PI / 180);
-  const rgb = d < 20 ? '239,68,68' : d < 50 ? '245,158,11' : '34,211,238';
+  const col = (a) => d < 20 ? `rgba(239,68,68,${a})` : d < 50 ? `rgba(245,158,11,${a})` : acc(a);
   const full = MAX_D * g.ppc, len = d * g.ppc;
 
-  ctx.strokeStyle = `rgba(${rgb},.28)`;
+  ctx.strokeStyle = col(.28);
   ctx.setLineDash([4, 6]);
   ctx.beginPath();
   ctx.moveTo(cx, fy); ctx.lineTo(cx - full * half, fy - full);
@@ -1229,8 +1357,8 @@ function drawCone(g, cx, fy, t) {
   ctx.setLineDash([]);
 
   const grd = ctx.createLinearGradient(0, fy, 0, fy - len);
-  grd.addColorStop(0, `rgba(${rgb},.38)`);
-  grd.addColorStop(1, `rgba(${rgb},.1)`);
+  grd.addColorStop(0, col(.38));
+  grd.addColorStop(1, col(.1));
   ctx.fillStyle = grd;
   ctx.beginPath();
   ctx.moveTo(cx, fy); ctx.lineTo(cx - len * half, fy - len); ctx.lineTo(cx + len * half, fy - len);
@@ -1241,7 +1369,7 @@ function drawCone(g, cx, fy, t) {
   ctx.lineWidth = 1.5;
   for (let i = 0; i < 3; i++) {
     const r = mod(t * 140 + i * L / 3, L);
-    ctx.strokeStyle = `rgba(${rgb},${(0.55 * (1 - r / L)).toFixed(3)})`;
+    ctx.strokeStyle = col((0.55 * (1 - r / L)).toFixed(3));
     ctx.beginPath(); ctx.arc(cx, fy, r, -Math.PI / 2 - a, -Math.PI / 2 + a); ctx.stroke();
   }
   ctx.lineWidth = 1;
@@ -1259,7 +1387,7 @@ function drawObstacle(g, cx, fy) {
   ctx.strokeStyle = 'rgba(148,163,184,.22)'; ctx.beginPath();
   for (let i = -oh; i < ow; i += 9) { ctx.moveTo(x + i, y + oh); ctx.lineTo(x + i + oh, y); }
   ctx.stroke(); ctx.restore();
-  rr(x, y, ow, oh, 4); ctx.strokeStyle = dragObstacle ? '#22d3ee' : '#94a3b8'; ctx.lineWidth = 1.5; ctx.stroke();
+  rr(x, y, ow, oh, 4); ctx.strokeStyle = dragObstacle ? acc(1) : '#94a3b8'; ctx.lineWidth = 1.5; ctx.stroke();
   ctx.fillStyle = '#e2e8f0'; ctx.font = '600 11px Inter, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(far ? 'Hindernis · >200 cm' : `Hindernis · ${Math.round(state.distance)} cm`, x + ow / 2, y + oh / 2 + .5);
@@ -1267,6 +1395,7 @@ function drawObstacle(g, cx, fy) {
   ctx.lineWidth = 1;
 }
 
+/* ---------- Fahrzeug-Bauteile ---------- */
 function drawWheel(cx, cy, ww, wl, ang, phase, color) {
   ctx.save();
   ctx.translate(cx, cy); ctx.rotate(ang);
@@ -1280,81 +1409,254 @@ function drawWheel(cx, cy, ww, wl, ang, phase, color) {
   ctx.restore();
 }
 
-function drawCar(g, t) {
-  const { carW: w, carL: l, carX: x, carTop: y } = g;
-  const blinkOn = Math.floor(t * 4) % 2 === 0;
-  const on = state.power;
-
-  // Alarm-Ring
-  if (sim.alarm && blinkOn) {
-    rr(x - 22, y - 12, w + 44, l + 22, 22);
-    ctx.fillStyle = 'rgba(239,68,68,.12)'; ctx.fill();
-    ctx.strokeStyle = 'rgba(239,68,68,.9)'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.lineWidth = 1;
+// Propeller (Schiff) bzw. Rotor (Drohne); dreht sichtbar langsamer als echt, damit nichts flimmert
+function drawProp(cx, cy, r, phase, rpm, plugged, blades, guard) {
+  const on = state.power && plugged;
+  const spinning = on && Math.abs(rpm) > 3;
+  ctx.save();
+  ctx.translate(cx, cy);
+  if (guard) {
+    ctx.beginPath(); ctx.arc(0, 0, r + 3, 0, Math.PI * 2);
+    ctx.strokeStyle = on ? acc(.55) : '#334155'; ctx.lineWidth = 1.5; ctx.stroke();
   }
+  if (spinning) {
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fillStyle = acc(Math.min(.25, Math.abs(rpm) / MAX_RPM * .25)); ctx.fill();
+  }
+  ctx.rotate(phase * Math.PI * 2 * 0.25);
+  ctx.fillStyle = on ? acc(spinning ? .8 : .55) : '#475569';
+  for (let b = 0; b < blades; b++) {
+    ctx.rotate(Math.PI * 2 / blades);
+    ctx.beginPath(); ctx.ellipse(0, -r / 2, r * 0.2, r / 2, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.beginPath(); ctx.arc(0, 0, Math.max(2.5, r * 0.18), 0, Math.PI * 2); ctx.fillStyle = '#0b1324'; ctx.fill();
+  ctx.restore();
+  ctx.lineWidth = 1;
+}
 
-  // Scheinwerfer-Lichtkegel
-  const lit = has('led') && (sim.led === 'on' || (sim.led === 'blink' && blinkOn));
+// Das Gehirn als Modul auf dem Fahrzeug (mit Cartridge-Streifen und Status-LED)
+function drawBrainModule(bx, by, bw, bh, blinkOn) {
+  const on = state.power;
+  rr(bx, by, bw, bh, 6); ctx.fillStyle = '#0b1324'; ctx.fill();
+  ctx.strokeStyle = on ? acc(.5) : '#334155'; ctx.stroke();
+  if (state.cartridge) { rr(bx + bw * 0.2, by - 6, bw * 0.6, 9, 2); ctx.fillStyle = CARTRIDGES[state.cartridge].color; ctx.fill(); }
+  const ledC = !on ? '#334155' : sim.alarm ? (blinkOn ? '#ef4444' : '#450a0a') : state.program ? acc(1) : '#22c55e';
+  ctx.save();
+  ctx.shadowColor = ledC; ctx.shadowBlur = on ? 10 : 0;
+  ctx.beginPath(); ctx.arc(bx + bw / 2, by + bh / 2, 4, 0, Math.PI * 2); ctx.fillStyle = ledC; ctx.fill();
+  ctx.restore();
+}
+
+function drawSonar(x, y, w) {
+  if (!has('sonar')) return;
+  rr(x, y - 6, w, 10, 3); ctx.fillStyle = state.power ? '#5b4a9c' : '#3f3f5a'; ctx.fill();
+  ctx.fillStyle = '#c4b5fd';
+  [x + w * 0.26, x + w * 0.74].forEach(ex => { ctx.beginPath(); ctx.arc(ex, y - 1, 3, 0, Math.PI * 2); ctx.fill(); });
+}
+
+function drawLights(points, lit, reach, spread) {
+  if (!has('led')) return;
   if (lit) {
-    [x + w * 0.2, x + w * 0.8].forEach(lx => {
-      const grd = ctx.createRadialGradient(lx, y, 1, lx, y, l * 0.9);
+    points.forEach(([lx, ly]) => {
+      const grd = ctx.createRadialGradient(lx, ly, 1, lx, ly, reach);
       grd.addColorStop(0, 'rgba(253,224,71,.45)'); grd.addColorStop(1, 'rgba(253,224,71,0)');
       ctx.fillStyle = grd;
-      ctx.beginPath(); ctx.moveTo(lx - 4, y); ctx.lineTo(lx - w * 0.45, y - l * 0.85); ctx.lineTo(lx + w * 0.45, y - l * 0.85); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(lx - 4, ly); ctx.lineTo(lx - spread, ly - reach); ctx.lineTo(lx + spread, ly - reach); ctx.closePath(); ctx.fill();
     });
   }
+  points.forEach(([lx, ly]) => {
+    ctx.beginPath(); ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = lit ? '#fde047' : '#713f12'; ctx.fill();
+  });
+}
 
-  // Räder (außen am Chassis)
+function bodyGradient(x, w) {
+  const body = ctx.createLinearGradient(x, 0, x + w, 0);
+  body.addColorStop(0, '#18243b'); body.addColorStop(0.5, '#22314f'); body.addColorStop(1, '#18243b');
+  return body;
+}
+
+/* ---------- Fahrzeuge (geben Positionen für die Port-Beschriftung zurück) ---------- */
+function drawCar(g, blinkOn, lit) {
+  const { carW: w, carL: l, carX: x, carTop: y } = g;
+  const on = state.power;
   const ww = w * 0.22, wl = l * 0.24;
   const frontY = y + l * 0.2, rearY = y + l * 0.78;
   const lxW = x - ww / 2 + 2, rxW = x + w + ww / 2 - 2;
   const servoRad = sim.servo * Math.PI / 180;
-  const frontColor = on && has('servo') ? '#4ade80' : '#475569';
-  const rearColor = (rpm, plugged) => on && plugged ? (Math.abs(rpm) > 3 ? '#22d3ee' : '#0e7490') : '#475569';
+  const frontColor = on && has('servo') ? acc(.9) : '#475569';
+  const rearColor = (rpm, plugged) => on && plugged ? acc(Math.abs(rpm) > 3 ? 1 : .45) : '#475569';
   drawWheel(lxW, frontY, ww, wl, servoRad, sim.phaseF, frontColor);
   drawWheel(rxW, frontY, ww, wl, servoRad, sim.phaseF, frontColor);
   drawWheel(lxW, rearY, ww, wl, 0, has('motorL') ? sim.phaseL : sim.phaseF, rearColor(sim.rpmL, has('motorL')));
   drawWheel(rxW, rearY, ww, wl, 0, has('motorR') ? sim.phaseR : sim.phaseF, rearColor(sim.rpmR, has('motorR')));
 
-  // Chassis
-  const body = ctx.createLinearGradient(x, 0, x + w, 0);
-  body.addColorStop(0, '#18243b'); body.addColorStop(0.5, '#22314f'); body.addColorStop(1, '#18243b');
-  rr(x, y, w, l, w * 0.28); ctx.fillStyle = body; ctx.fill();
-  ctx.strokeStyle = on ? 'rgba(34,211,238,.6)' : '#475569'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1;
+  rr(x, y, w, l, w * 0.28); ctx.fillStyle = bodyGradient(x, w); ctx.fill();
+  ctx.strokeStyle = on ? acc(.6) : '#475569'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1;
   rr(x + w * 0.18, y + l * 0.1, w * 0.64, l * 0.12, 6); ctx.fillStyle = 'rgba(148,163,184,.12)'; ctx.fill();
+  drawBrainModule(x + w * 0.2, y + l * 0.4, w * 0.6, l * 0.3, blinkOn);
+  drawSonar(x + w * 0.27, y, w * 0.46);
+  drawLights([[x + w * 0.2, y + 4], [x + w * 0.8, y + 4]], lit, l * 0.9, w * 0.45);
+  return {
+    motorL: [lxW - ww / 2 - 4, rearY, 'right'], motorR: [rxW + ww / 2 + 4, rearY, 'left'],
+    servo: [lxW - ww / 2 - 4, frontY, 'right'], sonar: [x + w * 0.73 + 5, y - 1, 'left'], led: [rxW + ww / 2 + 4, frontY, 'left']
+  };
+}
 
-  // Das Gehirn auf dem Dach
-  const bx = x + w * 0.2, by = y + l * 0.4, bw = w * 0.6, bh = l * 0.3;
-  rr(bx, by, bw, bh, 6); ctx.fillStyle = '#0b1324'; ctx.fill();
-  ctx.strokeStyle = on ? 'rgba(34,211,238,.5)' : '#334155'; ctx.stroke();
-  if (state.cartridge) { rr(bx + bw * 0.2, by - 6, bw * 0.6, 9, 2); ctx.fillStyle = CARTRIDGES[state.cartridge].color; ctx.fill(); }
-  const ledC = !on ? '#334155' : sim.alarm ? (blinkOn ? '#ef4444' : '#450a0a') : state.program ? '#22d3ee' : '#22c55e';
+function drawBoat(g, blinkOn, lit) {
+  const { carW: w, carL: l, carX: x, carTop: y } = g;
+  const on = state.power;
+  const cx = x + w / 2, stern = y + l;
+
+  // Kielwasser (je schneller, desto deutlicher)
+  const sp = Math.abs(sim.speed);
+  if (sp > 1) {
+    const a = Math.min(.45, sp / 90);
+    ctx.strokeStyle = `rgba(226,232,240,${a})`; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.15, stern - 4); ctx.lineTo(x - w * 0.5, stern + 40);
+    ctx.moveTo(x + w * 0.85, stern - 4); ctx.lineTo(x + w * 1.5, stern + 40);
+    ctx.stroke();
+    for (let i = 0; i < 3; i++) {
+      const k = mod(sim.time * sp * 0.02 + i / 3, 1);
+      ctx.strokeStyle = `rgba(226,232,240,${(a * (1 - k)).toFixed(3)})`;
+      ctx.beginPath(); ctx.arc(cx, stern + 6 + k * 30, w * 0.25 + k * w * 0.5, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    }
+    ctx.lineWidth = 1;
+  }
+
+  // Propeller am Heck, Ruder in der Mitte
+  const pr = w * 0.16;
+  drawProp(x + w * 0.28, stern + 7, pr, sim.phaseL, sim.rpmL, has('motorL'), 3, false);
+  drawProp(x + w * 0.72, stern + 7, pr, sim.phaseR, sim.rpmR, has('motorR'), 3, false);
   ctx.save();
-  ctx.shadowColor = ledC; ctx.shadowBlur = on ? 10 : 0;
-  ctx.beginPath(); ctx.arc(bx + bw / 2, by + bh / 2, 4, 0, Math.PI * 2); ctx.fillStyle = ledC; ctx.fill();
+  ctx.translate(cx, stern - 2); ctx.rotate(-sim.servo * Math.PI / 180);
+  rr(-2.5, 0, 5, 14, 2); ctx.fillStyle = on && has('servo') ? acc(.9) : '#475569'; ctx.fill();
   ctx.restore();
 
-  // Ultraschallsensor vorne
-  if (has('sonar')) {
-    rr(x + w * 0.27, y - 6, w * 0.46, 10, 3); ctx.fillStyle = on ? '#5b4a9c' : '#3f3f5a'; ctx.fill();
-    ctx.fillStyle = '#c4b5fd';
-    [x + w * 0.39, x + w * 0.61].forEach(ex => { ctx.beginPath(); ctx.arc(ex, y - 1, 3, 0, Math.PI * 2); ctx.fill(); });
-  }
-  // Scheinwerfer
-  if (has('led')) {
-    [x + w * 0.2, x + w * 0.8].forEach(lx => {
-      ctx.beginPath(); ctx.arc(lx, y + 4, 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = lit ? '#fde047' : '#713f12'; ctx.fill();
-    });
+  // Rumpf mit spitzem Bug
+  ctx.beginPath();
+  ctx.moveTo(cx, y - 4);
+  ctx.quadraticCurveTo(x + w + 2, y + l * 0.18, x + w, y + l * 0.55);
+  ctx.lineTo(x + w * 0.92, stern);
+  ctx.lineTo(x + w * 0.08, stern);
+  ctx.lineTo(x, y + l * 0.55);
+  ctx.quadraticCurveTo(x - 2, y + l * 0.18, cx, y - 4);
+  ctx.closePath();
+  ctx.fillStyle = bodyGradient(x, w); ctx.fill();
+  ctx.strokeStyle = on ? acc(.6) : '#475569'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1;
+  rr(x + w * 0.22, y + l * 0.64, w * 0.56, l * 0.22, 5); ctx.fillStyle = 'rgba(148,163,184,.12)'; ctx.fill();
+
+  drawBrainModule(x + w * 0.2, y + l * 0.3, w * 0.6, l * 0.26, blinkOn);
+  drawSonar(x + w * 0.32, y + 6, w * 0.36);
+  drawLights([[x + w * 0.2, y + l * 0.22], [x + w * 0.8, y + l * 0.22]], lit, l * 0.95, w * 0.45);
+  return {
+    motorL: [x + w * 0.28 - pr - 5, stern + 7, 'right'], motorR: [x + w * 0.72 + pr + 5, stern + 7, 'left'],
+    servo: [x - 6, y + l * 0.85, 'right'], sonar: [x + w * 0.68 + 5, y + 5, 'left'], led: [x + w + 6, y + l * 0.22, 'left']
+  };
+}
+
+function drawDrone(g, blinkOn, lit) {
+  const { carW: w, carL: l, carX: x, carTop: y } = g;
+  const on = state.power;
+  const cx = x + w / 2, cy = y + l * 0.55;
+  const r = w * 0.34;
+  const rotors = [
+    [x - r * 0.2, y + l * 0.26, 'L'], [x + w + r * 0.2, y + l * 0.26, 'R'],
+    [x - r * 0.2, y + l * 0.84, 'L'], [x + w + r * 0.2, y + l * 0.84, 'R']
+  ];
+  // Schatten auf dem Boden: zeigt, dass die Drohne fliegt
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  ctx.beginPath(); ctx.ellipse(cx + 10, cy + 14, w * 0.75, l * 0.45, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Arme
+  ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  ctx.beginPath(); rotors.forEach(([rx, ry]) => { ctx.moveTo(cx, cy); ctx.lineTo(rx, ry); }); ctx.stroke();
+  ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+  // Halterung zum Sensor
+  if (has('sonar')) { ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx, y + l * 0.3); ctx.lineTo(cx, y); ctx.stroke(); ctx.lineWidth = 1; }
+
+  // Körper
+  rr(x + w * 0.16, y + l * 0.3, w * 0.68, l * 0.5, 12); ctx.fillStyle = bodyGradient(x, w); ctx.fill();
+  ctx.strokeStyle = on ? acc(.6) : '#475569'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1;
+  drawBrainModule(x + w * 0.25, y + l * 0.42, w * 0.5, l * 0.24, blinkOn);
+  // Servo zeigt die Drehrichtung (Gieren) als Pfeil
+  ctx.save();
+  ctx.translate(cx, y + l * 0.74); ctx.rotate(sim.servo * Math.PI / 180);
+  ctx.fillStyle = on && has('servo') ? acc(.9) : '#475569';
+  ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(5, 3); ctx.lineTo(-5, 3); ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  // Rotoren: links = Motor links, rechts = Motor rechts
+  rotors.forEach(([rx, ry, side]) => {
+    const isL = side === 'L';
+    drawProp(rx, ry, r, isL ? sim.phaseL : sim.phaseR, isL ? sim.rpmL : sim.rpmR, has(isL ? 'motorL' : 'motorR'), 2, true);
+  });
+  drawSonar(cx - w * 0.2, y + 2, w * 0.4);
+  drawLights([[x + w * 0.26, y + l * 0.32], [x + w * 0.74, y + l * 0.32]], lit, l * 0.9, w * 0.4);
+  return {
+    motorL: [x - r * 1.35 - 4, y + l * 0.55, 'right'], motorR: [x + w + r * 1.35 + 4, y + l * 0.55, 'left'],
+    servo: [cx + 10, y + l * 0.74, 'left'], sonar: [cx + w * 0.2 + 5, y + 1, 'left'], led: [x + w * 0.74 + 6, y + l * 0.32 - 9, 'left']
+  };
+}
+
+function drawRobot(g, blinkOn, lit) {
+  const { carW: w, carX: x, carTop: y } = g;
+  const on = state.power;
+  const R = w * 0.62, cx = x + w / 2, cy = y + R;
+  const ww = w * 0.2, wl = R * 0.8;
+  const rearColor = (rpm, plugged) => on && plugged ? acc(Math.abs(rpm) > 3 ? 1 : .45) : '#475569';
+  const wx = R * 0.92 + ww * 0.35; // Räder ragen seitlich aus dem Körper
+  drawWheel(cx - wx, cy, ww, wl, 0, has('motorL') ? sim.phaseL : sim.phaseF, rearColor(sim.rpmL, has('motorL')));
+  drawWheel(cx + wx, cy, ww, wl, 0, has('motorR') ? sim.phaseR : sim.phaseF, rearColor(sim.rpmR, has('motorR')));
+
+  // Runder Körper
+  const grd = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.3, 2, cx, cy, R);
+  grd.addColorStop(0, '#2a3a5c'); grd.addColorStop(1, '#141f36');
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = grd; ctx.fill();
+  ctx.strokeStyle = on ? acc(.6) : '#475569'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.lineWidth = 1;
+
+  // Sensorkopf, vom Servo gedreht
+  ctx.save();
+  ctx.translate(cx, cy - R * 0.15); ctx.rotate(sim.servo * Math.PI / 180);
+  rr(-w * 0.2, -R * 0.42, w * 0.4, R * 0.42, 6); ctx.fillStyle = '#0b1324'; ctx.fill();
+  ctx.strokeStyle = on && has('servo') ? acc(.9) : '#334155'; ctx.stroke();
+  ctx.fillStyle = on ? acc(.9) : '#334155';
+  ctx.beginPath(); ctx.arc(-w * 0.08, -R * 0.24, 2.5, 0, Math.PI * 2); ctx.arc(w * 0.08, -R * 0.24, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  drawBrainModule(cx - w * 0.25, cy + R * 0.15, w * 0.5, R * 0.42, blinkOn);
+  drawSonar(cx - w * 0.22, y + 3, w * 0.44);
+  drawLights([[cx - R * 0.55, cy - R * 0.62], [cx + R * 0.55, cy - R * 0.62]], lit, R * 1.6, w * 0.4);
+  return {
+    motorL: [cx - wx - ww / 2 - 4, cy, 'right'], motorR: [cx + wx + ww / 2 + 4, cy, 'left'],
+    servo: [cx + R * 0.8 + 6, cy + R * 0.75, 'left'], sonar: [cx + w * 0.22 + 5, y + 2, 'left'], led: [cx + R * 0.55 + 6, cy - R * 0.62 - 8, 'left']
+  };
+}
+
+function drawVehicle(g, t, type) {
+  const { carW: w, carL: l, carX: x, carTop: y } = g;
+  const blinkOn = Math.floor(t * 4) % 2 === 0;
+  const lit = has('led') && (sim.led === 'on' || (sim.led === 'blink' && blinkOn));
+
+  // Alarm-Ring
+  if (sim.alarm && blinkOn) {
+    rr(x - 26, y - 12, w + 52, l + 22, 22);
+    ctx.fillStyle = 'rgba(239,68,68,.12)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(239,68,68,.9)'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.lineWidth = 1;
   }
 
-  // Port-Beschriftungen am Fahrzeug
+  const anchors = { car: drawCar, boat: drawBoat, drone: drawDrone, robot: drawRobot }[type](g, blinkOn, lit);
+
+  // Port-Buchstaben an den Bauteilen
   ctx.font = '600 10px "JetBrains Mono", monospace'; ctx.textBaseline = 'middle';
-  const label = (txt, lx, ly, align, color) => { if (!txt) return; ctx.textAlign = align; ctx.fillStyle = color; ctx.fillText(txt, lx, ly); };
-  label(portsWith('motorL').join(','), lxW - ww / 2 - 4, rearY, 'right', COMPONENTS.motorL.color);
-  label(portsWith('motorR').join(','), rxW + ww / 2 + 4, rearY, 'left', COMPONENTS.motorR.color);
-  label(portsWith('servo').join(','), lxW - ww / 2 - 4, frontY, 'right', COMPONENTS.servo.color);
-  label(portsWith('sonar').join(','), x + w * 0.73 + 5, y - 1, 'left', COMPONENTS.sonar.color);
-  label(portsWith('led').join(','), rxW + ww / 2 + 4, frontY, 'left', COMPONENTS.led.color);
+  ctx.fillStyle = state.power ? acc(.95) : '#64748b';
+  Object.entries(anchors).forEach(([comp, [lx, ly, align]]) => {
+    const txt = portsWith(comp).join(',');
+    if (!txt) return;
+    ctx.textAlign = align;
+    ctx.fillText(txt, lx, ly);
+  });
 }
 
 // Hindernis direkt im Bild verschieben
@@ -1399,9 +1701,10 @@ let valEls = {}, barEls = {}, needleEls = {}, ledTestBtns = [], distEls = [], di
 
 function valueCard(p) {
   const type = state.ports[p], c = COMPONENTS[type];
+  const empty = type === 'empty';
   const head = `<div class="flex items-center justify-between gap-2">
       <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full" style="background:${c.color}"></span><span class="mono text-[11px] tracking-widest text-slate-400">PORT ${p}</span></div>
-      <span class="text-xs font-semibold truncate" style="color:${type === 'empty' ? '#64748b' : c.color}">${c.short}</span>
+      <span class="text-xs font-semibold truncate ${empty ? 'text-slate-500' : 't-acc'}">${c.short}</span>
     </div>`;
   let body = '';
   switch (type) {
@@ -1412,7 +1715,7 @@ function valueCard(p) {
       body = `<div class="mt-2 flex items-baseline gap-2"><span class="mono text-3xl font-semibold tabular-nums" data-val="${p}-rpm">0</span><span class="text-xs text-slate-400">U/min (RPM)</span></div>
         <div class="mt-2 h-2 rounded-full bg-slate-800 overflow-hidden relative">
           <div class="absolute inset-y-0 left-1/2 w-px bg-slate-600"></div>
-          <div data-bar="${p}" class="absolute inset-y-0 rounded-full" style="background:${c.color};left:50%;width:0"></div>
+          <div data-bar="${p}" class="absolute inset-y-0 rounded-full" style="background:var(--acc);left:50%;width:0"></div>
         </div>
         <div class="mt-1.5 text-xs text-slate-400">Richtung: <span class="text-slate-200" data-val="${p}-dir">Stopp</span></div>`;
       break;
@@ -1427,8 +1730,8 @@ function valueCard(p) {
       body = `<div class="mt-2 flex items-center gap-4">
           <svg viewBox="0 0 60 36" width="72" height="44" aria-hidden="true">
             <path d="M6 32a24 24 0 0 1 48 0" fill="none" stroke="#334155" stroke-width="3" stroke-linecap="round"/>
-            <line data-needle="${p}" x1="30" y1="32" x2="30" y2="10" stroke="${c.color}" stroke-width="3" stroke-linecap="round" />
-            <circle cx="30" cy="32" r="3" fill="${c.color}"/>
+            <line data-needle="${p}" x1="30" y1="32" x2="30" y2="10" style="stroke:var(--acc)" stroke-width="3" stroke-linecap="round" />
+            <circle cx="30" cy="32" r="3" style="fill:var(--acc)"/>
           </svg>
           <div><div class="mono text-3xl font-semibold tabular-nums" data-val="${p}-ang">0°</div><div class="text-xs text-slate-400" data-val="${p}-adir">geradeaus</div></div>
         </div>`;
@@ -1441,7 +1744,7 @@ function valueCard(p) {
         <p class="text-[11px] text-slate-500 mt-1.5">Der Test geht nur, wenn kein Programm läuft.</p>`;
       break;
   }
-  return `<div class="vcard" data-card="${p}" style="--pc:${c.color}">${head}${body}</div>`;
+  return `<div class="vcard" data-card="${p}" style="--pc:${empty ? '#334155' : 'var(--acc)'}">${head}${body}</div>`;
 }
 
 function renderValues() {
@@ -1487,7 +1790,7 @@ function updateDashboard() {
       if (!on) setVal(`${p}-dstat`, 'Gehirn ist aus', '#64748b');
       else if (d < 20) setVal(`${p}-dstat`, 'Sehr nah! (unter 20 cm)', '#f87171');
       else if (d < 50) setVal(`${p}-dstat`, 'Nah', '#fbbf24');
-      else if (d < MAX_D) setVal(`${p}-dstat`, 'Hindernis erkannt', '#67e8f9');
+      else if (d < MAX_D) setVal(`${p}-dstat`, 'Hindernis erkannt', 'var(--acc-soft)');
       else setVal(`${p}-dstat`, 'Nichts in Reichweite', '#94a3b8');
     } else if (type === 'servo') {
       const a = Math.round(sim.servo);
@@ -1539,7 +1842,7 @@ const ledPwr = $('#ledPwr'), ledRun = $('#ledRun'), ledAlm = $('#ledAlm'), brain
 function updateLeds() {
   setLed(ledPwr, state.power ? '#22c55e' : '#334155', state.power ? 'on' : '');
   const runMode = !state.power ? '' : (state.loading || state.booting) ? 'blink-fast' : state.program ? 'pulse' : '';
-  setLed(ledRun, runMode ? '#22d3ee' : '#334155', runMode);
+  setLed(ledRun, runMode ? 'var(--acc)' : '#334155', runMode);
   setLed(ledAlm, sim.alarm ? '#ef4444' : '#334155', sim.alarm ? 'blink' : '');
   brainEl.classList.toggle('is-alarm', sim.alarm);
 }
@@ -1555,10 +1858,10 @@ function renderBrain() {
     : state.program ? 'Programm läuft'
     : 'Bereit';
   const bt = {
-    off:          ['#334155', '',           'Aus'],
-    searching:    ['#3b82f6', 'blink-fast', 'Suche …'],
-    connected:    ['#22d3ee', 'pulse',      'Verbunden'],
-    disconnected: ['#ef4444', 'on',         'Getrennt']
+    off:          ['#334155',    '',           'Aus'],
+    searching:    ['#3b82f6',    'blink-fast', 'Suche …'],
+    connected:    ['var(--acc)', 'pulse',      'Verbunden'],
+    disconnected: ['#ef4444',    'on',         'Getrennt']
   }[state.bt];
   setLed($('#ledBt'), bt[0], bt[1]);
   $('#btText').textContent = bt[2];
@@ -1569,7 +1872,8 @@ function renderBrain() {
 function updateGamepadLock() {
   let msg = '';
   if (!state.power) msg = 'Das Gehirn ist aus.';
-  else if (state.program !== 'rc') msg = 'Stecke die rote Cartridge „RC-Sportwagen“ ein, um selbst zu fahren.';
+  else if (!state.cartridge) msg = 'Stecke eine Cartridge ein und wähle das Programm „Manuell …“.';
+  else if (state.program !== 'manual') msg = `Wähle beim Gehirn das Programm „Manuell ${vehicle().drive}“.`;
   else if (state.bt !== 'connected') msg = 'Bluetooth getrennt – tippe beim Gehirn auf die Bluetooth-Anzeige.';
   $('#padLock').hidden = !msg;
   $('#padLockText').textContent = msg;
@@ -1580,6 +1884,7 @@ function renderAll() {
   renderBrain();
   renderSlot();
   renderShelf();
+  renderModes();
   renderValues();
 }
 
@@ -1605,7 +1910,7 @@ document.querySelectorAll('.pad-btn[data-dir]').forEach(btn => {
 });
 
 $('#btnLight').addEventListener('click', () => {
-  if (state.program !== 'rc') return;
+  if (state.program !== 'manual') return;
   state.lightManual = !state.lightManual;
   $('#btnLight').setAttribute('aria-pressed', String(state.lightManual));
   if (!has('led')) log('warn', 'Licht-Taste gedrückt, aber es ist kein LED-Lichtmodul angesteckt.');
@@ -1615,7 +1920,7 @@ $('#btnLight').addEventListener('click', () => {
 const KEYMAP = { ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
 function keyAllowed(e) {
   const tag = (e.target && e.target.tagName) || '';
-  return state.tab === 'sim' && state.program === 'rc' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(tag);
+  return state.tab === 'sim' && state.program === 'manual' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(tag);
 }
 window.addEventListener('keydown', (e) => {
   const dir = KEYMAP[e.code];
@@ -1656,8 +1961,17 @@ function sanitizeRule(r) {
   };
 }
 
+function sanitizeProgram(obj) {
+  if (!obj || typeof obj.name !== 'string' || !Array.isArray(obj.rules) || !obj.rules.length) return null;
+  return { name: obj.name.trim().slice(0, 22) || 'Mein Programm', rules: obj.rules.slice(0, MAX_RULES).map(sanitizeRule) };
+}
+
 function options(obj, selected) {
   return Object.entries(obj).map(([k, v]) => `<option value="${k}"${k === selected ? ' selected' : ''}>${esc(v)}</option>`).join('');
+}
+
+function liveText(r, i) {
+  return `Regel ${i + 1}: ${OPS[r.op]} ${validValue(r.value) ? r.value : '?'} cm → ${TARGETS[r.target].label}: ${TARGETS[r.target].actions[r.action]}`;
 }
 
 function ruleHTML(r, i) {
@@ -1697,7 +2011,7 @@ function renderRules() {
     ? rules.map(ruleHTML).join('')
     : '<p class="text-sm text-slate-500">Noch keine Regel. Klicke auf „+ Regel hinzufügen“.</p>';
   $('#btnAddRule').disabled = rules.length >= MAX_RULES;
-  $('#sbLive').innerHTML = rules.map((r, i) => `<li class="live-item" data-live="${i}"><span class="dot"></span><span>Regel ${i + 1}: ${OPS[r.op]} ${validValue(r.value) ? r.value : '?'} cm → ${TARGETS[r.target].label}: ${TARGETS[r.target].actions[r.action]}</span></li>`).join('');
+  $('#sbLive').innerHTML = rules.map((r, i) => `<li class="live-item" data-live="${i}"><span class="dot"></span><span>${esc(liveText(r, i))}</span></li>`).join('');
   renderSbCart();
 }
 
@@ -1710,18 +2024,21 @@ function updateLiveList() {
 }
 
 function isDirty() {
-  if (!state.custom) return true;
-  return JSON.stringify({ n: $('#cartName').value.trim(), r: state.draft.rules }) !== JSON.stringify({ n: state.custom.name, r: state.custom.rules });
+  const saved = state.customs[state.sbTarget];
+  if (!saved) return true;
+  return JSON.stringify({ n: $('#progName').value.trim(), r: state.draft.rules }) !== JSON.stringify({ n: saved.name, r: saved.rules });
 }
 
 function renderSbCart() {
-  $('#sbCart').innerHTML = cartHTML('custom');
-  $('#sbStatus').textContent = state.custom
-    ? `Gespeichert: „${state.custom.name}“ · ${plural(state.custom.rules.length, 'Regel', 'Regeln')}`
-    : 'Leer – noch kein Programm gespeichert.';
-  $('#sbDirty').hidden = !(state.custom && isDirty());
+  const id = state.sbTarget;
+  const saved = state.customs[id];
+  $('#sbCart').innerHTML = cartHTML(id);
+  $('#sbStatus').textContent = saved
+    ? `Auf „${cartName(id)}“ gespeichert: „${saved.name}“ · ${plural(saved.rules.length, 'Regel', 'Regeln')}`
+    : `Auf „${cartName(id)}“ ist noch keine eigene Logik gespeichert.`;
+  $('#sbDirty').hidden = !(saved && isDirty());
   $('#btnSave').disabled = state.saving;
-  $('#btnTest').disabled = !state.custom || state.saving;
+  $('#btnTest').disabled = !saved || state.saving;
 }
 
 function showSbError(msg) {
@@ -1730,11 +2047,16 @@ function showSbError(msg) {
   el.hidden = !msg;
 }
 
+function persistCustoms() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state.customs)); } catch (e) { /* Speicher nicht verfügbar – gilt nur für diese Sitzung */ }
+}
+
 function saveToCartridge() {
   if (state.saving) return;
-  const name = $('#cartName').value.trim();
+  const id = state.sbTarget;
+  const name = $('#progName').value.trim();
   const rules = state.draft.rules;
-  if (!name) { showSbError('Bitte gib deiner Cartridge einen Namen.'); return; }
+  if (!name) { showSbError('Bitte gib deinem Programm einen Namen.'); return; }
   if (!rules.length) { showSbError('Füge mindestens eine Regel hinzu.'); return; }
   const bad = rules.findIndex(r => !validValue(r.value));
   if (bad >= 0) { showSbError(`Regel ${bad + 1}: Der Abstand muss zwischen 1 und 200 cm liegen.`); return; }
@@ -1747,25 +2069,28 @@ function saveToCartridge() {
   setTimeout(() => {
     state.saving = false;
     $('#sbWrite').hidden = true;
-    state.custom = { name, rules: rules.map(r => ({ ...r })) };
+    state.customs[id] = { name, rules: rules.map(r => ({ ...r })) };
     state.draft.name = name;
-    try { localStorage.setItem(LS_KEY, JSON.stringify(state.custom)); } catch (e) { /* Speicher nicht verfügbar – Cartridge gilt nur für diese Sitzung */ }
-    log('cart', `Programm „${name}“ auf die leere Cartridge geschrieben (${plural(rules.length, 'Regel', 'Regeln')}).`);
-    renderShelf(); renderSlot(true); renderSbCart();
-    if (state.cartridge === 'custom' && state.power && !state.booting) {
-      log('info', 'Die Cartridge steckt gerade im Gehirn – das neue Programm wird neu geladen.');
-      loadProgram('custom');
+    persistCustoms();
+    log('cart', `Programm „${name}“ auf die Cartridge „${cartName(id)}“ geschrieben (${plural(rules.length, 'Regel', 'Regeln')}).`);
+    renderSbCart(); renderModes();
+    // Steckt die Cartridge gerade mit „Eigene Logik“ im Gehirn, neues Programm sofort übernehmen
+    if (state.cartridge === id && state.mode === 'custom' && state.power && !state.booting && !state.loading) {
+      log('info', 'Die Cartridge steckt gerade im Gehirn – das neue Programm wird übernommen.');
+      startProgram('custom');
     }
   }, 1100);
 }
 
 function testCustom() {
-  if (!state.custom) return;
+  const id = state.sbTarget;
+  if (!state.customs[id]) return;
   setTab('sim');
-  if (state.cartridge === 'custom') {
-    if (state.power && !state.booting && !state.loading) loadProgram('custom');
+  if (state.cartridge === id) {
+    if (state.mode === 'custom' && state.power && !state.booting && !state.loading) startProgram('custom');
+    else selectMode('custom');
   } else {
-    insertCartridge('custom');
+    insertCartridge(id, 'custom');
   }
 }
 
@@ -1775,7 +2100,8 @@ function onRuleEdit(e) {
   const row = e.target.closest('[data-rule]');
   if (!f || !row) return;
   if (e.type === 'input' && f !== 'value') return; // Selects nur per „change“
-  const r = state.draft.rules[+row.dataset.rule];
+  const i = +row.dataset.rule;
+  const r = state.draft.rules[i];
   if (f === 'value') {
     r.value = e.target.value === '' ? NaN : Math.round(Number(e.target.value));
     e.target.classList.toggle('is-invalid', !validValue(r.value));
@@ -1789,8 +2115,8 @@ function onRuleEdit(e) {
     return;
   }
   row.querySelector('[data-sentence]').textContent = ruleSentence(r);
-  const li = $(`#sbLive [data-live="${row.dataset.rule}"] span:last-child`);
-  if (li) li.textContent = `Regel ${+row.dataset.rule + 1}: ${OPS[r.op]} ${validValue(r.value) ? r.value : '?'} cm → ${TARGETS[r.target].label}: ${TARGETS[r.target].actions[r.action]}`;
+  const li = $(`#sbLive [data-live="${i}"] span:last-child`);
+  if (li) li.textContent = liveText(r, i);
   renderSbCart();
 }
 
@@ -1807,6 +2133,11 @@ function setTab(t) {
   });
   if (t !== 'sim') clearInputs();
   if (t === 'sim') resizeCanvas();
+  else {
+    // Sandbox speichert standardmäßig auf die gerade eingesteckte Cartridge
+    if (state.cartridge) { state.sbTarget = state.cartridge; $('#sbTarget').value = state.sbTarget; }
+    renderSbCart();
+  }
 }
 
 /* =========================================================
@@ -1819,6 +2150,10 @@ function wireEvents() {
   $('#btnUnplug').addEventListener('click', () => PORT_IDS.forEach(p => setPort(p, 'empty')));
   $('#btnEject').addEventListener('click', () => ejectCartridge(false));
   $('#btnClearLog').addEventListener('click', () => { consoleEl.innerHTML = ''; });
+  $('#modes').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mode]');
+    if (b) selectMode(b.dataset.mode);
+  });
 
   // Regal: Klick = einstecken / auswerfen, Drag & Drop in den Slot
   const shelf = $('#shelf');
@@ -1839,8 +2174,7 @@ function wireEvents() {
   });
 
   const slot = $('#slot'), mouth = $('#slotMouth');
-  const slotTargets = [slot, mouth];
-  slotTargets.forEach(el => {
+  [slot, mouth].forEach(el => {
     el.addEventListener('dragenter', (e) => { e.preventDefault(); mouth.classList.add('is-target'); });
     el.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; mouth.classList.add('is-target'); });
     el.addEventListener('dragleave', () => mouth.classList.remove('is-target'));
@@ -1910,7 +2244,9 @@ function wireEvents() {
     showSbError('');
     renderRules();
   });
-  $('#cartName').addEventListener('input', renderSbCart);
+  $('#sbTarget').innerHTML = Object.keys(CARTRIDGES).map(id => `<option value="${id}">${esc(cartName(id))} – ${esc(CARTRIDGES[id].sub)}</option>`).join('');
+  $('#sbTarget').addEventListener('change', (e) => { state.sbTarget = e.target.value; renderSbCart(); });
+  $('#progName').addEventListener('input', renderSbCart);
   $('#btnSave').addEventListener('click', saveToCartridge);
   $('#btnTest').addEventListener('click', testCustom);
 
@@ -1920,15 +2256,18 @@ function wireEvents() {
 /* =========================================================
    17) START
    ========================================================= */
-function loadSavedCartridge() {
+function loadSavedPrograms() {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return;
-    const obj = JSON.parse(raw);
-    if (!obj || typeof obj.name !== 'string' || !Array.isArray(obj.rules) || !obj.rules.length) return;
-    state.custom = { name: obj.name.trim().slice(0, 22) || 'Meine Cartridge', rules: obj.rules.slice(0, MAX_RULES).map(sanitizeRule) };
-    state.draft = { name: state.custom.name, rules: state.custom.rules.map(r => ({ ...r })) };
-  } catch (e) { /* kein Zugriff auf localStorage – mit leerer Cartridge starten */ }
+    if (raw) {
+      const obj = JSON.parse(raw) || {};
+      Object.keys(CARTRIDGES).forEach(id => { const p = sanitizeProgram(obj[id]); if (p) state.customs[id] = p; });
+    } else {
+      // Älteres Format (eine „Leere Cartridge“) auf die Auto-Cartridge übernehmen
+      const old = sanitizeProgram(JSON.parse(localStorage.getItem(LS_KEY_V1) || 'null'));
+      if (old) { state.customs.auto = old; persistCustoms(); }
+    }
+  } catch (e) { /* kein Zugriff auf localStorage – ohne gespeicherte Programme starten */ }
 }
 
 let lastFrame = performance.now(), lastLive = 0;
@@ -1945,17 +2284,20 @@ function frame(now) {
 }
 
 function init() {
-  loadSavedCartridge();
-  // Standard-Auto ist beim Start bereits zusammengesteckt
+  loadSavedPrograms();
+  // Standard-Bauteile sind beim Start bereits eingesteckt
   Object.assign(state.ports, { A: 'sonar', B: 'motorL', C: 'motorR', D: 'servo' });
   buildPorts();
   wireEvents();
-  $('#cartName').value = state.draft.name;
+  $('#progName').value = state.draft.name;
+  $('#sbTarget').value = state.sbTarget;
   renderRules();
+  applyTheme();
   renderAll();
   resizeCanvas();
   log('info', 'Willkommen bei Santronic! Das hier ist das Gehirn deines Baukastens.');
-  log('info', 'Am Gehirn stecken schon vier Bauteile (Standard-Auto): A = Ultraschall, B/C = Motoren, D = Lenkung. Du kannst sie über die Auswahlfelder tauschen.');
+  log('info', 'Am Gehirn stecken schon vier Bauteile: A = Ultraschall, B/C = Motoren, D = Lenkung. Du kannst sie über die Auswahlfelder tauschen.');
+  log('info', 'Die Farbe der Cartridge bestimmt, was du baust: Rot = Auto, Blau = Schiff, Weiß = Flug, Gelb = Roboter.');
   log('info', 'Schritt 1: Drück den runden Power-Knopf am Gehirn.');
   requestAnimationFrame(frame);
 }
